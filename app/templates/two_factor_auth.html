@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}OTP Verification | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/two_factor_auth.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="otp-container">
+        <h1>OTP Verification</h1>
+        <p>Enter the 6 digit OTP sent to your email</p>
+        <form action="/verify-otp" method="POST">
+            <div class="form-group">
+                <input type="text" id="otp" name="otp" maxlength="6" required>
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Don't ask code for this device again</label>
+            </div><br/>
+            <button type="submit" class="submit-btn">Submit</button>
+        </form>
+    </div>
+{% endblock %}
