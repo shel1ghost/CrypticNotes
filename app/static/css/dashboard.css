@@ -1,0 +1,49 @@
+.base-menu {
+    /* Add styles for the base menu if needed */
+}
+
+.main-dashboard {
+    text-align: center;
+    margin: 0 auto;
+    width: 80%; /* Adjust width as needed */
+}
+
+.main-dashboard h1 {
+    margin-bottom: 20px;
+    color: #34495e;
+    font-size: 2.5em;
+}
+
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 40px;
+}
+
+.dashboard-item {
+    border: 2px solid #2c3e50;
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #ecf0f1;
+    cursor: pointer;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    text-align: center;
+}
+
+.dashboard-item img {
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+
+.dashboard-item h2 {
+    margin-top: 10px;
+    color: #34495e;
+    font-size: 1.5em;
+}
+
+.dashboard-item:hover {
+    transform: scale(1.05);
+    background-color: #d0d9e1;
+}
