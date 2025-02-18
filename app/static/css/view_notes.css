@@ -1,0 +1,60 @@
+h1{
+    font-size: 2.2em;
+}
+
+.notes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.note {
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.note h2 {
+    margin: 0 0 10px;
+    font-size: 1.6em;
+    color: #333;
+}
+
+.note p {
+    margin: 0 0 10px;
+    color: #666;
+    text-align: left;
+}
+
+.note small {
+    color: #aaa;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 1em;
+    color: #fff;
+    background-color: #2980b9;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-right: 10px; /* Add space between buttons */
+}
+
+button:hover {
+    background-color: #3498db;
+}
+
+button:focus {
+    outline: none;
+}
+
+
+
+
+

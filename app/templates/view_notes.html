@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}View Notes | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/view_notes.css') }}">
+{% endblock %}
+
+{% block content %}
+    <h1>Your Notes</h1>
+    <div class="notes-container">
+        {% for note in notes %}
+            <div class="note">
+                <div class="note_headings">
+                    <h2>{{ note.title }}</h2>
+                    <p>{{ note.content[:100] }}...</p>
+                    <p><small>Last modified: {{ note.last_modified }}</small></p>
+                </div>
+                <div class="note_buttons">
+                    <button onclick="location.href='{{ url_for('view_note', note_id=note.note_id) }}'">View</button>
+                    <button onclick="location.href='{{ url_for('view_notes', note_id=note.note_id) }}'">Edit</button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

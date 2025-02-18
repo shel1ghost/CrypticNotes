@@ -33,6 +33,7 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+    {% if not logged_in %}
     <footer>
         <p>Follow us on</p>
         <div class="social-icons">
@@ -47,5 +48,6 @@
             </a>
         </div>
     </footer>
+    {% endif %}
 </body>
 </html>

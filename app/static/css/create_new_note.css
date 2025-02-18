@@ -54,7 +54,12 @@
     outline: none;  /* Disable outline on focus */
 }
 
-.save-btn {
+.form-group p {
+    text-align: left;
+    margin: 4px;
+}
+
+.save-btn, .back-btn{
     width: 100px;
     padding: 10px 20px;
     font-size: 1.2em;
@@ -66,6 +71,11 @@
     transition: background-color 0.3s ease;
     display: inline-block;
     margin-top: 20px; /* Add some space between input fields and button */
+}
+
+.back-btn a{
+    text-decoration: none;
+    color: #ecf0f1;
 }
 
 .save-btn:hover {

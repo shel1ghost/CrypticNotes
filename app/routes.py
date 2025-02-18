@@ -2,7 +2,7 @@ from flask import render_template, url_for, flash, redirect, request, session, m
 from app import app, db, bcrypt
 from app.models import Users, Notes,  Keys
 from app.utils.two_fa_email import send_otp_email, generate_otp
-from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blowfish
+from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blowfish, decrypt_content_blowfish
 from app.decorators import login_required
 from datetime import datetime
 import re
@@ -158,8 +158,28 @@ def create_new_note():
 @app.route('/view_notes')
 @login_required
 def view_notes():
+    user_id = session.get('user_id')
     user_name = session.get('user_name')
-    return render_template('view_notes.html', logged_in=True, user_name=user_name)
+    notes = Notes.query.filter_by(user_id=user_id).all()
+    decrypted_notes = []
+
+    for note in notes:
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        with open(os.path.join("notes", note.filename), 'r') as file:
+            data = json.load(file)
+            decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
+            decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
+            decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+            dt_object = datetime.fromisoformat(decrypted_last_modified)
+            formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
+            decrypted_notes.append({
+                "note_id": note.note_id,
+                "title": decrypted_title,
+                "content": decrypted_content,
+                "last_modified": formatted_date_time
+            })
+    
+    return render_template('view_notes.html', notes=decrypted_notes, logged_in=True, user_name=user_name)
 
 @app.route('/settings')
 @login_required
@@ -172,3 +192,30 @@ def settings():
 def encryption_details():
     user_name = session.get('user_name')
     return render_template('encryption_details.html', logged_in=True, user_name=user_name)
+
+@app.route('/view_note')
+@login_required
+def view_note():
+    user_name = session.get('user_name')
+    note_id = request.args.get('note_id')
+    if(note_id is None):
+        return redirect('/view_notes')
+    else:
+        decrypted_note = {}
+        note = Notes.query.filter_by(note_id=note_id).first()
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        with open(os.path.join("notes", note.filename), 'r') as file:
+            data = json.load(file)
+            decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
+            decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
+            decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+
+            dt_object = datetime.fromisoformat(decrypted_last_modified)
+            formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
+        
+            decrypted_note['title'] = decrypted_title
+            decrypted_note['content'] = decrypted_content
+            decrypted_note['last_modified'] = formatted_date_time
+        return render_template('view_note.html', note=decrypted_note, logged_in=True, user_name=user_name)
+
+

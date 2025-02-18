@@ -18,3 +18,13 @@ def encrypt_content_blowfish(content, key):
     padded_data = padder.update(content.encode()) + padder.finalize()
     encrypted_content = encryptor.update(padded_data) + encryptor.finalize()
     return base64.urlsafe_b64encode(encrypted_content).decode()
+
+def decrypt_content_blowfish(encrypted_content, key):
+    backend = default_backend()
+    cipher = Cipher(algorithms.Blowfish(key.encode()), modes.CBC(b'00000000'), backend=backend)
+    decryptor = cipher.decryptor()
+    encrypted_content = base64.urlsafe_b64decode(encrypted_content)
+    unpadder = padding.PKCS7(algorithms.Blowfish.block_size).unpadder()
+    decrypted_content = decryptor.update(encrypted_content) + decryptor.finalize()
+    unpadded_content = unpadder.update(decrypted_content) + unpadder.finalize()
+    return unpadded_content.decode()
