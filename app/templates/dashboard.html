@@ -11,23 +11,23 @@
         <!-- Add base menu content here -->
     </div>
     <div class="main-dashboard">
-        <h1>Welcome to CrypticNotes, {{ user_name }}</h1>
+        <h1>Welcome to CrypticNotes, {{ user_name }}!</h1>
         <div class="dashboard-content">
-            <div class="dashboard-item" onclick="location.href='/page1';">
-                <img src="{{ url_for('static', filename='images/placeholder.png') }}" alt="Placeholder Image">
-                <h2>Page 1</h2>
+            <div class="dashboard-item" onclick="location.href='/create_new_note';">
+                <img src="{{ url_for('static', filename='images/plus-solid.svg') }}" alt="Placeholder Image">
+                <h2>Create New Note</h2>
             </div>
-            <div class="dashboard-item" onclick="location.href='/page2';">
-                <img src="{{ url_for('static', filename='images/placeholder.png') }}" alt="Placeholder Image">
-                <h2>Page 2</h2>
+            <div class="dashboard-item" onclick="location.href='/view_notes';">
+                <img src="{{ url_for('static', filename='images/eye-regular.svg') }}" alt="Placeholder Image">
+                <h2>View Your Notes</h2>
             </div>
-            <div class="dashboard-item" onclick="location.href='/page3';">
-                <img src="{{ url_for('static', filename='images/placeholder.png') }}" alt="Placeholder Image">
-                <h2>Page 3</h2>
+            <div class="dashboard-item" onclick="location.href='/settings';">
+                <img src="{{ url_for('static', filename='images/gear-solid.svg') }}" alt="Placeholder Image">
+                <h2>Settings</h2>
             </div>
-            <div class="dashboard-item" onclick="location.href='/page4';">
-                <img src="{{ url_for('static', filename='images/placeholder.png') }}" alt="Placeholder Image">
-                <h2>Page 4</h2>
+            <div class="dashboard-item" onclick="location.href='/encryption_details';">
+                <img src="{{ url_for('static', filename='images/lock-solid.svg') }}" alt="Placeholder Image">
+                <h2>Encryption Details</h2>
             </div>
         </div>
     </div>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Create New Note | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/create_new_note.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="new-note-container">
+        <h1>Create New Note</h1>
+        <form action="{{ url_for('create_new_note') }}" method="POST">
+            <div class="form-group">
+                <input type="text" id="title" name="title" placeholder="Title">
+            </div>
+            <div class="form-group">
+                <textarea id="content" name="content" rows="15" placeholder="Enter text here..."></textarea>
+            </div>
+            <button type="submit" class="save-btn">Save</button>
+        </form>
+    </div>
+{% endblock %}

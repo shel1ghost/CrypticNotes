@@ -15,7 +15,8 @@
         <div class="login-menu">
             {% if login_page or two_factor_auth_page %}
                 <a href="/">Home</a>
-            {% elif dashboard_page %}
+            {% elif logged_in %}
+                <p>{{ user_name }}</p>
                 <a href="/logout">Logout</a>
             {% else %}
                 <a href="/login">Login</a>

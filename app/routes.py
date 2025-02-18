@@ -1,9 +1,14 @@
-from flask import render_template, url_for, flash, redirect, request, session, make_response
+from flask import render_template, url_for, flash, redirect, request, session, make_response, jsonify
 from app import app, db, bcrypt
-from app.models import Users
+from app.models import Users, Notes,  Keys
 from app.utils.two_fa_email import send_otp_email, generate_otp
+from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blowfish
 from app.decorators import login_required
+from datetime import datetime
 import re
+import os
+import secrets
+import json
 
 @app.route('/')
 def home():
@@ -63,6 +68,7 @@ def login():
     return render_template('login.html', login_page=True)
 
 @app.route('/two_factor_auth', methods=['GET', 'POST'])
+@login_required
 def two_factor_auth():
     if request.method == 'POST':
         otp_code = request.form.get('otp')
@@ -90,11 +96,79 @@ def two_factor_auth():
 def dashboard():
     user_logged_in = 'user_id' in session
     user_name = session.get('user_name') 
-    return render_template('dashboard.html', dashboard_page=True, user_name=user_name)
+    return render_template('dashboard.html', logged_in=True, user_name=user_name)
 
 @app.route('/logout')
+@login_required
 def logout():
     session.pop('user_id', None)
     session.pop('user_name', None)
     #flash('You have been logged out.', 'success')
     return redirect(url_for('home'))
+
+@app.route('/create_new_note', methods=['GET', 'POST'])
+@login_required
+def create_new_note():
+    user_name = session.get('user_name')
+    if request.method == 'POST':
+        title = request.form.get('title')
+        content = request.form.get('content')
+
+        # Server-side validation for title and content
+        if not title or len(title) > 100:
+            flash('Title must be between 1 and 100 characters.', 'danger')
+            return render_template('create_new_note.html', logged_in=True, user_name=user_name)
+        if not content or len(content) < 10:
+            flash('Content must be at least 10 characters long.', 'danger')
+            return render_template('create_new_note.html', logged_in=True, user_name=user_name)
+        
+        # Generate MD5 key
+        key_value = generate_md5_key()
+        
+         # Encrypt the title, content, and last modified date using Blowfish
+        encrypted_title = encrypt_content_blowfish(title, key_value)
+        encrypted_content = encrypt_content_blowfish(content, key_value)
+        last_modified = datetime.utcnow().isoformat()
+        encrypted_last_modified = encrypt_content_blowfish(last_modified, key_value)
+
+        # Ensure the notes directory exists
+        if not os.path.exists('notes'):
+            os.makedirs('notes')
+        
+        # Save encrypted title, content, and last modified date to JSON file
+        filename = f"{secrets.token_hex(8)}.json"
+        filepath = os.path.join("notes", filename)
+        with open(filepath, 'w') as file:
+            json.dump({"title": encrypted_title, "content": encrypted_content, "last_modified": encrypted_last_modified}, file)
+        
+        # Save key to the database
+        new_key = Keys(key_value=key_value)
+        db.session.add(new_key)
+        db.session.commit()
+
+        # Save note information to the database
+        new_note = Notes(user_id=session['user_id'], filename=filename, key_id=new_key.key_id)
+        db.session.add(new_note)
+        db.session.commit()
+        
+        flash('Note saved successfully!', 'success')
+        return redirect(url_for('dashboard', logged_in=True, user_name=user_name))
+    return render_template('create_new_note.html', logged_in=True, user_name=user_name)
+
+@app.route('/view_notes')
+@login_required
+def view_notes():
+    user_name = session.get('user_name')
+    return render_template('view_notes.html', logged_in=True, user_name=user_name)
+
+@app.route('/settings')
+@login_required
+def settings():
+    user_name = session.get('user_name')
+    return render_template('settings.html', logged_in=True, user_name=user_name)
+
+@app.route('/encryption_details')
+@login_required
+def encryption_details():
+    user_name = session.get('user_name')
+    return render_template('encryption_details.html', logged_in=True, user_name=user_name)

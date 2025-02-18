@@ -1,0 +1,73 @@
+.new-note-container {
+    width: 70%;
+    margin: 4px auto;
+    padding: 4px;
+    border-radius: 10px;
+    background-color: #ecf0f1;
+    text-align: center;
+}
+
+.new-note-container h1 {
+    margin-bottom: 20px;
+    color: #34495e;
+    font-size: 2.5em;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;  /* Ensure the labels are left-aligned */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #34495e;
+    font-size: 1.2em;
+}
+
+.form-group input#title {
+    width: 100%;
+    padding: 4px;
+    border: none;
+    border-bottom: 1px solid #2c3e50;  /* Only bottom border */
+    font-size: 1.8em;
+    background-color: transparent;
+    color: #34495e;
+}
+
+.form-group input#title:focus {
+    outline: none;  /* Disable outline on focus */
+}
+
+.form-group textarea#content {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1.5em;
+    background-color: #fff;
+    color: #34495e;
+}
+
+.form-group textarea#content:focus {
+    outline: none;  /* Disable outline on focus */
+}
+
+.save-btn {
+    width: 100px;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    color: #ecf0f1;
+    background-color: #2980b9;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+    margin-top: 20px; /* Add some space between input fields and button */
+}
+
+.save-btn:hover {
+    background-color: #3498db;
+}
