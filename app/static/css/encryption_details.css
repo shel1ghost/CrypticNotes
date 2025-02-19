@@ -1,0 +1,32 @@
+.container {
+    padding: 20px;
+    border-radius: 10px;
+    display: block;
+}
+h1 {
+    color: #34495e;
+    font-size: 2.4em;
+}
+
+h2 {
+    color: #34495e;
+    padding: 10px;
+}
+
+.step {
+    background-color: #ccc;
+    color: #2c3e50;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.enc_details {
+    text-align: justify;
+    color: #666;
+    margin: 10px;
+}
+
+b{
+    color: #333;
+}

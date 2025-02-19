@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Encryption Details | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/encryption_details.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h1>How your notes are encrypted?</h1>
+    <p class="enc_details">Your notes are kept secure using one of the most popular text encryption algorithm: Blowfish Algorithm. 
+    Each details of your note including it's title, last modified date and content itself is encrypted with this algorithm.</p>
+    <h2>Algorithm Overview</h2>
+    <p class="enc_details">
+        Blowfish is a symmetric-key block cipher designed by Bruce Schneier in 1993. It has a 64-bit block 
+        size and a variable key length from 32 bits up to 448 bits due to which is considered more secure.
+        Blowfish uses 16 rounds of Feistel network structure and is known for its speed and effectiveness.
+    </p>
+    <h2>Step-by-Step Encryption Process</h2>
+    <p class="enc_details">Let's assume that plaintext is <b>{{ data['plaintext'] }}</b></p>
+    <p class="enc_details">Blowfish algorithm basically contains two steps: <b>Subkey generation</b> and <b>Data encryption</b></p>
+    <p class="enc_details">
+    <b>Subkey generation: </b>
+    A key of size 32 to 448 bits is kept inside an array as [K1, K2, .... Kn] where n is greater than 1 and less than 14.
+    Here, every K have value of 32 bit, so total K value = 32x14 = 448 bits. The subkeys generated for the current encryption process are: <br/>
+    <b>{{ data['subkeys'] }}</b> 
+    After this, P-Array is initialized as [P1, P2 .... P18] which is of size 32 bits and 4 S-Boxes s1, s2, s3 and s4. Then bitwise XOR operation is performed as:
+    <ul><li>P1 = P1 XOR K1</li><li>P2 = P2 XOR K2</li><li>P14 = P14 XOR K14</li></ul></p>
+    <p class="enc_details">
+    This results in 64 bits plaintext with initial values all 0, and is send to blowfish encryption algorithm.
+    </p>
+    <p class="enc_details">
+    <b>Data encryption: </b>
+    This 64 bits data is divided into two parts each of 32 bits from which one is XORed with P1 in left and the resulted data is passed to a function which again
+    results 32 bits data which is again XORed with another 32 bit data which was obtained by dividing 64 bits data. The same steps goes on until P18 is reached 
+    which results in a ciphertext.
+    {% for step in data.steps.values() %}
+        <div class="step">{{ step }}</div>
+    {% endfor %}
+    <p class="enc_details">Thus, the final ciphertext is <b>{{ data['ciphertext'] }}</b></p>
+</div>
+
+{% endblock %}

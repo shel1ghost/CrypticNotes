@@ -2,6 +2,7 @@ from flask import render_template, url_for, flash, redirect, request, session, m
 from app import app, db, bcrypt
 from app.models import Users, Notes,  Keys
 from app.utils.two_fa_email import send_otp_email, generate_otp
+from app.utils.blowfish import blowfish_encrypt, blowfish_key_schedule, blowfish_round
 from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blowfish, decrypt_content_blowfish
 from app.decorators import login_required
 from datetime import datetime
@@ -186,12 +187,6 @@ def view_notes():
     
     return render_template('view_notes.html', notes=decrypted_notes, logged_in=True, user_name=user_name)
 
-@app.route('/encryption_details')
-@login_required
-def encryption_details():
-    user_name = session.get('user_name')
-    return render_template('encryption_details.html', logged_in=True, user_name=user_name)
-
 @app.route('/view_note')
 @login_required
 def view_note():
@@ -346,3 +341,43 @@ def settings():
         return redirect(url_for('dashboard'))
     return render_template('settings.html', logged_in=True, user_name=user_name)
 
+@app.route('/encryption_details')
+@login_required
+def encryption_details():
+    user_name = session.get('user_name')
+    key = b"mysecretkey"
+    subkeys = blowfish_key_schedule(key)
+
+    plaintext = b"HelloBlow"
+    plaintext_block = list(plaintext[:8])
+    steps = {}
+    text = plaintext.decode('utf-8')
+    
+    L = int.from_bytes(plaintext_block[:4], byteorder='big')
+    R = int.from_bytes(plaintext_block[4:], byteorder='big')
+    
+    #steps.append(f"Initial L = {L:#010x}, R = {R:#010x}")
+    steps["first_step"] = f"Initial L = {L:#010x}, R = {R:#010x}"
+    
+    for i in range(0, 16, 2):
+        L, R = blowfish_round(L, R, subkeys[i:i+2], i // 2 + 1)
+        L &= 0xFFFFFFFF
+        R &= 0xFFFFFFFF
+        #steps.append(f"Round {i // 2 + 1}: L = {L:#010x}, R = {R:#010x}")
+        steps[i // 2 + 1] = f"Round {i // 2 + 1}: L = {L:#010x}, R = {R:#010x}"
+    
+    final_ciphertext = L.to_bytes(4, byteorder='big') + R.to_bytes(4, byteorder='big')
+    final_hex = final_ciphertext.hex()
+    
+    #steps.append(f"Final L = {L:#010x}, R = {R:#010x}")
+    #steps.append(f"Ciphertext (Hex): {final_hex}")
+    steps["final_step"] = f"Final L = {L:#010x}, R = {R:#010x}"
+
+    data = {
+        'plaintext': text,
+        'ciphertext': final_hex,
+        'steps': steps,
+        'subkeys': subkeys
+    }
+
+    return render_template('encryption_details.html', data=data, logged_in=True, user_name=user_name)

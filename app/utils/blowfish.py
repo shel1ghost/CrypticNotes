@@ -37,7 +37,7 @@ def blowfish_round(L, R, subkeys, round_num):
     R_new = R ^ subkeys[1]
     
     # Print the intermediate L and R at each round
-    print(f"Round {round_num}: L = {L_new:#010x}, R = {R_new:#010x}")
+    #print(f"Round {round_num}: L = {L_new:#010x}, R = {R_new:#010x}")
     
     return L_new, R_new
 
@@ -47,7 +47,7 @@ def blowfish_encrypt(block, subkeys):
     L = int.from_bytes(block[:4], byteorder='big')
     R = int.from_bytes(block[4:], byteorder='big')
 
-    print(f"Initial L = {L:#010x}, R = {R:#010x}")
+    #print(f"Initial L = {L:#010x}, R = {R:#010x}")
 
     for i in range(0, 16, 2):  # 16 rounds, step by 2 (each round uses a pair of subkeys)
         L, R = blowfish_round(L, R, subkeys[i:i+2], i // 2 + 1)  # Pass each pair of subkeys
@@ -57,7 +57,7 @@ def blowfish_encrypt(block, subkeys):
         R &= 0xFFFFFFFF  # Ensuring R is within 32 bits
 
     # After the rounds, return the concatenated result as a byte array
-    print(f"Final L = {L:#010x}, R = {R:#010x}")
+    #print(f"Final L = {L:#010x}, R = {R:#010x}")
     return L.to_bytes(4, byteorder='big') + R.to_bytes(4, byteorder='big')
 
 # The main Blowfish decryption function
@@ -89,13 +89,13 @@ decrypted_text = blowfish_decrypt(ciphertext, subkeys)
 
 # Show Ciphertext in Hexadecimal
 ciphertext_hex = ciphertext.hex()
-print(f"Ciphertext (Hex): {ciphertext_hex}")
+#print(f"Ciphertext (Hex): {ciphertext_hex}")
 
 # Handle decrypted text as raw bytes and try to decode as UTF-8, else show hex
 try:
     decrypted_text_str = decrypted_text.decode('utf-8')
-    print(f"Decrypted text (UTF-8): {decrypted_text_str}")
+    #print(f"Decrypted text (UTF-8): {decrypted_text_str}")
 except UnicodeDecodeError:
     decrypted_text_hex = decrypted_text.hex()
-    print(f"Decrypted text (Hex): {decrypted_text_hex}")
+    #print(f"Decrypted text (Hex): {decrypted_text_hex}")
 
