@@ -17,6 +17,7 @@
                 <textarea id="content" name="content" rows="15" placeholder="Enter text here..."></textarea>
             </div>
             <button type="submit" class="save-btn">Save</button>
+            <button type="button" class="cancel-btn" onclick="location.href='{{ url_for('dashboard') }}'">Cancel</button>
         </form>
     </div>
 {% endblock %}

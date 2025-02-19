@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}User Settings | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="settings-container">
+        <form action="{{ url_for('settings') }}" method="POST">
+            <div class="change-password">
+                <h2>Change Password</h2>
+                <div class="form-group">
+                    <label for="old_password">Old Password</label>
+                    <input type="password" id="old_password" name="old_password" value="{{ old_password }}">
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" value="{{ new_password }}">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_new_password">Confirm New Password</label>
+                    <input type="password" id="confirm_new_password" name="confirm_new_password" value="{{ confirm_new_password }}">
+                </div>
+            </div>
+
+            <div class="change-name">
+                <h2>Change Name</h2>
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" value="{{ user_name }}">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="save-btn">Save Changes</button>
+                <button type="button" class="cancel-btn" onclick="location.href='{{ url_for('dashboard') }}'">Cancel</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

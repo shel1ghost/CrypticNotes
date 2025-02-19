@@ -7,7 +7,14 @@
 {% endblock %}
 
 {% block content %}
-    <h1>Your Notes</h1>
+    {% if not notes %}
+        <h1>No notes to show.</h1>
+        <button onclick="location.href='{{ url_for('dashboard') }}'">Return to dashboard</button>
+    {% else %}
+    <div class="note_header">
+        <button onclick="location.href='{{ url_for('dashboard') }}'">Return to dashboard</button>
+        <h1>Your Notes</h1>
+    </div>
     <div class="notes-container">
         {% for note in notes %}
             <div class="note">
@@ -18,9 +25,10 @@
                 </div>
                 <div class="note_buttons">
                     <button onclick="location.href='{{ url_for('view_note', note_id=note.note_id) }}'">View</button>
-                    <button onclick="location.href='{{ url_for('view_notes', note_id=note.note_id) }}'">Edit</button>
+                    <button onclick="location.href='{{ url_for('edit_note', note_id=note.note_id) }}'">Edit</button>
                 </div>
             </div>
         {% endfor %}
     </div>
+    {% endif %}
 {% endblock %}

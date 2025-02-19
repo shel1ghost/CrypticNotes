@@ -1,0 +1,79 @@
+.settings-container {
+    display: inline;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0px auto;
+    width: 40%;
+    padding: 10px;
+    border-radius: 10px;
+    background-color: #ecf0f1;
+}
+
+.change-password,
+.change-name {
+    margin-bottom: 20px;
+}
+
+.change-password h2,
+.change-name h2 {
+    margin-bottom: 20px;
+    font-size: 1.8em;
+    color: #34495e;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 1.2em;
+    color: #34495e;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    background-color: #fff;
+    color: #34495e;
+}
+
+.save-btn,
+.cancel-btn {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    color: #ecf0f1;
+    background-color: #2980b9;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-right: 10px; /* Add space between buttons */
+}
+
+.save-btn:hover,
+.cancel-btn:hover {
+    background-color: #3498db;
+}
+
+.cancel-btn {
+    background-color: #e74c3c;
+}
+
+.cancel-btn:hover {
+    background-color: #c0392b;
+}
+
+button:focus {
+    outline: none;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}

@@ -9,6 +9,7 @@ import re
 import os
 import secrets
 import json
+import pytz
 
 @app.route('/')
 def home():
@@ -128,7 +129,9 @@ def create_new_note():
          # Encrypt the title, content, and last modified date using Blowfish
         encrypted_title = encrypt_content_blowfish(title, key_value)
         encrypted_content = encrypt_content_blowfish(content, key_value)
-        last_modified = datetime.utcnow().isoformat()
+        timezone = pytz.timezone('Asia/Kathmandu')
+        localized_time = datetime.now(timezone)
+        last_modified = localized_time.isoformat()
         encrypted_last_modified = encrypt_content_blowfish(last_modified, key_value)
 
         # Ensure the notes directory exists
@@ -161,6 +164,8 @@ def view_notes():
     user_id = session.get('user_id')
     user_name = session.get('user_name')
     notes = Notes.query.filter_by(user_id=user_id).all()
+    if not notes:
+        return render_template('view_notes.html', notes=False, logged_in=True, user_name=user_name)
     decrypted_notes = []
 
     for note in notes:
@@ -180,12 +185,6 @@ def view_notes():
             })
     
     return render_template('view_notes.html', notes=decrypted_notes, logged_in=True, user_name=user_name)
-
-@app.route('/settings')
-@login_required
-def settings():
-    user_name = session.get('user_name')
-    return render_template('settings.html', logged_in=True, user_name=user_name)
 
 @app.route('/encryption_details')
 @login_required
@@ -216,6 +215,134 @@ def view_note():
             decrypted_note['title'] = decrypted_title
             decrypted_note['content'] = decrypted_content
             decrypted_note['last_modified'] = formatted_date_time
-        return render_template('view_note.html', note=decrypted_note, logged_in=True, user_name=user_name)
+        return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
 
+@app.route('/edit_note', methods=['GET', 'POST'])
+@login_required
+def edit_note():
+    user_name = session.get('user_name')
+    note_id = request.args.get('note_id')
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        content = request.form.get('content')
+
+        # Server-side validation for title and content
+        if not title or len(title) > 100:
+            flash('Title must be between 1 and 100 characters.', 'danger')
+            return render_template('create_new_note.html', logged_in=True, user_name=user_name)
+        if not content or len(content) < 10:
+            flash('Content must be at least 10 characters long.', 'danger')
+            return render_template('create_new_note.html', logged_in=True, user_name=user_name)
+        
+        note = Notes.query.filter_by(note_id=note_id).first()
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        
+         # Encrypt the title, content, and last modified date using Blowfish
+        encrypted_title = encrypt_content_blowfish(title, key.key_value)
+        encrypted_content = encrypt_content_blowfish(content, key.key_value)
+        timezone = pytz.timezone('Asia/Kathmandu')
+        localized_time = datetime.now(timezone)
+        last_modified = localized_time.isoformat()
+        encrypted_last_modified = encrypt_content_blowfish(last_modified, key.key_value)
+
+        filename = note.filename
+        filepath = os.path.join("notes", filename)
+        with open(filepath, 'w') as file:
+            json.dump({"title": encrypted_title, "content": encrypted_content, "last_modified": encrypted_last_modified}, file)
+        
+        flash('Note updated successfully!', 'success')
+        return redirect(url_for('dashboard', logged_in=True, user_name=user_name))
+        
+    
+    if(note_id is None):
+        return redirect('/view_notes')
+    else:
+        decrypted_note = {}
+        note = Notes.query.filter_by(note_id=note_id).first()
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        with open(os.path.join("notes", note.filename), 'r') as file:
+            data = json.load(file)
+            decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
+            decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
+            decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+
+            dt_object = datetime.fromisoformat(decrypted_last_modified)
+            formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
+        
+            decrypted_note['title'] = decrypted_title
+            decrypted_note['content'] = decrypted_content
+            decrypted_note['last_modified'] = formatted_date_time
+        return render_template('edit_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+
+@app.route('/delete_note')
+@login_required
+def delete_note():
+    user_name = session.get('user_name')
+    note_id = request.args.get('note_id')
+    note = Notes.query.get_or_404(note_id)
+    key_id = note.key_id
+    
+    # Delete the note file from the file system
+    try:
+        os.remove(os.path.join("notes", note.filename))
+    except Exception as e:
+        return redirect(url_for('view_notes'))
+    
+    # Delete the note from the database
+    db.session.delete(note)
+    db.session.commit()
+    
+    # Delete the associated key from the database
+    key = Keys.query.get(key_id)
+    if key:
+        db.session.delete(key)
+        db.session.commit()
+    
+    flash('Note deleted successfully!', 'success')
+    return redirect(url_for('view_notes'))
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    user_name = session.get('user_name')
+    if request.method == 'POST':
+        user_id = session.get('user_id')
+        user = Users.query.get_or_404(user_id)
+
+        # Validate and update name
+        new_name = request.form.get('name')
+        if new_name:
+            if not re.match(r'^[A-Za-z\s]{1,100}$', new_name):
+                flash('Name should contain only letters and spaces, up to 100 characters.', 'danger')
+                return redirect(url_for('user_settings'))
+            if new_name != user.name:
+                user.name = new_name
+                session['user_name'] = new_name
+
+        # Validate and update password
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        confirm_new_password = request.form.get('confirm_new_password')
+
+        if old_password and new_password and confirm_new_password:
+            if not bcrypt.check_password_hash(user.password, old_password):
+                flash('Old password is incorrect.', 'danger')
+                print(new_password)
+                return render_template('settings.html', old_password=old_password, new_password=new_password, confirm_new_password=confirm_new_password)
+
+            if new_password != confirm_new_password:
+                flash('New passwords do not match.', 'danger')
+                return render_template('settings.html', old_password=old_password, new_password=new_password, confirm_new_password=confirm_new_password)
+
+            if not re.match(r'(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).{8,}', new_password):
+                flash('New password must be at least 8 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.', 'danger')
+                return render_template('settings.html', old_password=old_password, new_password=new_password, confirm_new_password=confirm_new_password)
+
+            user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+
+        db.session.commit()
+        flash('Your changes have been saved successfully.', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('settings.html', logged_in=True, user_name=user_name)
 
