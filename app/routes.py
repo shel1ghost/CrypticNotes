@@ -505,30 +505,34 @@ def export_notes():
                 "content": decrypted_content,
                 "last_modified": formatted_date_time
             })
+
+    # Automatically get the base path of the current file (app.py)
     base_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Create a temporary directory to store PDFs within the base path
     temp_dir = os.path.join(base_path, 'temp')
-    # Create a temporary directory to store PDFs
-    if not os.path.exists('temp'):
-        os.makedirs('temp')
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
 
     # Generate PDFs from data
     pdf_filenames = []
     for item in decrypted_notes:
         title = item.get('title', 'Untitled')
         content = item.get('content', 'No content')
-        pdf_filename = f'temp/{title}.pdf'
+        pdf_filename = os.path.join(temp_dir, f'{title}.pdf')
         generate_pdf(title, content, pdf_filename)
         pdf_filenames.append(pdf_filename)
 
-    # Create a zip file containing all PDFs
-    zip_filename = 'pdfs.zip'
+    # Create a zip file containing all PDFs in the base path
+    zip_filename = os.path.join(base_path, 'pdfs.zip')
     create_zip_file(pdf_filenames, zip_filename)
 
+    # Send the zip file as a download
     response = send_file(zip_filename, as_attachment=True)
 
-    # Remove the temporary directory and PDFs
+    # Cleanup temporary files
     cleanup_files(pdf_filenames)
 
-    # Send the zip file as a download
     return response
+
 
