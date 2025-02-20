@@ -30,3 +30,19 @@ h2 {
 b{
     color: #333;
 }
+ul {
+    margin-left: 25px;
+}
+
+.return-btn {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    color: #ecf0f1;
+    background-color: #2980b9;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+    margin-top: 20px; 
+}

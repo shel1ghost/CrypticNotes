@@ -40,6 +40,7 @@
         <div class="step">{{ step }}</div>
     {% endfor %}
     <p class="enc_details">Thus, the final ciphertext is <b>{{ data['ciphertext'] }}</b></p>
+    <button type="button" class="return-btn" onclick="location.href='{{ url_for('dashboard') }}'">Return to Dashboard</button>
 </div>
 
 {% endblock %}
