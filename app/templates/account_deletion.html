@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Account | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/account_deletion.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="deletion-container">
+        <h2>Delete Account</h2>
+        <form action="{{ url_for('delete_account') }}" method="POST">
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <p class="warning_msg">Are you sure you want to delete your account? This action cannot be undone.</p>
+            <div class="form-actions">
+                <button type="submit" class="delete-btn">Delete Account</button>
+                <button type="button" class="cancel-btn" onclick="location.href='{{ url_for('dashboard') }}'">Cancel</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

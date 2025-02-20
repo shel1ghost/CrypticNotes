@@ -62,6 +62,17 @@ button:focus {
     outline: none;
 }
 
+input {
+    font-size: 20px;
+    width: 300px;
+    margin-right: 10px;
+    color: #666;
+    outline: none;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #666;
+}
+
 
 
 

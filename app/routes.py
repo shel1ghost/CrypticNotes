@@ -1,4 +1,4 @@
-from flask import render_template, url_for, flash, redirect, request, session, make_response, jsonify
+from flask import render_template, render_template_string, url_for, flash, redirect, request, session, make_response, jsonify, send_file
 from app import app, db, bcrypt
 from app.models import Users, Notes,  Keys
 from app.utils.two_fa_email import send_otp_email, generate_otp
@@ -6,6 +6,7 @@ from app.utils.blowfish import blowfish_encrypt, blowfish_key_schedule, blowfish
 from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blowfish, decrypt_content_blowfish
 from app.decorators import login_required
 from datetime import datetime
+from app.utils.pdf_utils import generate_pdf, create_zip_file, cleanup_files
 import re
 import os
 import secrets
@@ -381,3 +382,153 @@ def encryption_details():
     }
 
     return render_template('encryption_details.html', data=data, logged_in=True, user_name=user_name)
+
+@app.route('/delete_account', methods=['GET', 'POST'])
+@login_required
+def delete_account():
+    user_id = session.get('user_id')
+    user_name = session.get('user_name')
+    user = Users.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+
+        if not bcrypt.check_password_hash(user.password, password):
+            flash('Password is incorrect.', 'danger')
+            render_template('account_deletion.html', password=password, logged_in=True, user_name=user_name)
+        else:
+            # Delete all notes associated with the user
+            notes = Notes.query.filter_by(user_id=user_id).all()
+            for note in notes:
+                # Delete the note file from the file system
+                try:
+                    os.remove(os.path.join("notes", note.filename))
+                except Exception as e:
+                    flash(f"An error occurred while trying to delete the note file: {str(e)}", 'danger')
+                    render_template('account_deletion.html', logged_in=True, user_name=user_name)
+
+                # Delete the associated key from the database
+                key = Keys.query.get(note.key_id)
+                if key:
+                    db.session.delete(key)
+        
+                # Delete the note from the database
+                db.session.delete(note)
+        
+            # Delete the user from the database
+            db.session.delete(user)
+            db.session.commit()
+
+            # Clear the session and logout the user
+            session.pop('user_id', None)
+            session.pop('user_name', None)
+            response.delete_cookie('remember_token')
+            response.delete_cookie('otp')
+            flash('Your account has been deleted successfully.', 'success')
+            return redirect(url_for('login'))
+
+    return render_template('account_deletion.html', logged_in=True, user_name=user_name)
+
+@app.route('/search', methods=['POST'])
+@login_required
+def search_note():
+    query = request.form['query'].lower()
+    print(query)
+    user_id = session.get('user_id')
+    user_name = session.get('user_name')
+    notes = Notes.query.filter_by(user_id=user_id).all()
+    if not notes:
+        return render_template('view_notes.html', notes=False, logged_in=True, user_name=user_name)
+    decrypted_notes = []
+
+    for note in notes:
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        with open(os.path.join("notes", note.filename), 'r') as file:
+            data = json.load(file)
+            decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
+            decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
+            decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+            dt_object = datetime.fromisoformat(decrypted_last_modified)
+            formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
+            decrypted_notes.append({
+                "note_id": note.note_id,
+                "title": decrypted_title,
+                "content": decrypted_content,
+                "last_modified": formatted_date_time
+            })
+    
+    search_results = []
+        
+    for entry in decrypted_notes:
+        if query in entry.get('title').lower():
+            search_results.append(entry)
+    
+    response = '''
+        {% for note in search_results %}
+            <div class="note">
+                <div class="note_headings">
+                    <h2>{{ note.title }}</h2>
+                    <p>{{ note.content[:100] }}...</p>
+                    <p><small>Last modified: {{ note.last_modified }}</small></p>
+                </div>
+                <div class="note_buttons">
+                    <button onclick="location.href='{{ url_for('view_note', note_id=note.note_id) }}'">View</button>
+                    <button onclick="location.href='{{ url_for('edit_note', note_id=note.note_id) }}'">Edit</button>
+                </div>
+            </div>
+        {% endfor %}'''
+
+    return render_template_string(response, search_results=search_results)
+
+@app.route('/export_notes')
+@login_required
+def export_notes():
+    user_id = session.get('user_id')
+    user_name = session.get('user_name')
+    notes = Notes.query.filter_by(user_id=user_id).all()
+    if not notes:
+        return render_template('view_notes.html', notes=False, logged_in=True, user_name=user_name)
+    decrypted_notes = []
+
+    for note in notes:
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        with open(os.path.join("notes", note.filename), 'r') as file:
+            data = json.load(file)
+            decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
+            decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
+            decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+            dt_object = datetime.fromisoformat(decrypted_last_modified)
+            formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
+            decrypted_notes.append({
+                "note_id": note.note_id,
+                "title": decrypted_title,
+                "content": decrypted_content,
+                "last_modified": formatted_date_time
+            })
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    temp_dir = os.path.join(base_path, 'temp')
+    # Create a temporary directory to store PDFs
+    if not os.path.exists('temp'):
+        os.makedirs('temp')
+
+    # Generate PDFs from data
+    pdf_filenames = []
+    for item in decrypted_notes:
+        title = item.get('title', 'Untitled')
+        content = item.get('content', 'No content')
+        pdf_filename = f'temp/{title}.pdf'
+        generate_pdf(title, content, pdf_filename)
+        pdf_filenames.append(pdf_filename)
+
+    # Create a zip file containing all PDFs
+    zip_filename = 'pdfs.zip'
+    create_zip_file(pdf_filenames, zip_filename)
+
+    response = send_file(zip_filename, as_attachment=True)
+
+    # Remove the temporary directory and PDFs
+    cleanup_files(pdf_filenames)
+
+    # Send the zip file as a download
+    return response
+

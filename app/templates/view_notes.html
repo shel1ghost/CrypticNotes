@@ -12,8 +12,11 @@
         <button onclick="location.href='{{ url_for('dashboard') }}'">Return to dashboard</button>
     {% else %}
     <div class="note_header">
-        <button onclick="location.href='{{ url_for('dashboard') }}'">Return to dashboard</button>
         <h1>Your Notes</h1>
+        <input type="search" name="search_field" id="search_field" placeholder="Enter the note title...">
+        <button id="search_btn">Search</button>
+        <button type="button" onclick="location.href='{{ url_for('export_notes') }}'">Export Notes</button>
+        <button onclick="location.href='{{ url_for('dashboard') }}'">Return to dashboard</button>
     </div>
     <div class="notes-container">
         {% for note in notes %}
@@ -30,5 +33,24 @@
             </div>
         {% endfor %}
     </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $('#search_btn').click(function(){
+                var query = $('#search_field').val();
+                $.ajax({
+                    url: '/search',
+                    type: 'POST',
+                    data: { 'query': query },
+                    success: function(response){
+                        $('.notes-container').html(response);
+                    },
+                    error: function(error){
+                        console.log(error);
+                    }
+                });
+            });
+        });
+    </script>
     {% endif %}
 {% endblock %}
