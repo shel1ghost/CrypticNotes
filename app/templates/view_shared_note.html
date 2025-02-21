@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}View Note | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/create_new_note.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="new-note-container">
+            <input type="hidden" id="note_id" value="{{ note_id }}">
+            <div class="form-group">
+                <input type="text" id="title" name="title" placeholder="Title" value="{{ note.title }}" readonly>
+            </div>
+            <div class="form-group">
+                <textarea id="content" name="content" placeholder="Enter text here..." readonly>{{ note.content }}</textarea>
+            </div>
+    </div>
+    <script>
+        const textarea = document.getElementById('content');
+        function adjustTextareaHeight() {
+            textarea.style.height = 'auto';  // Reset the height to auto to shrink the height if text is deleted
+            textarea.style.height = (textarea.scrollHeight) + 'px';  // Set the height to scrollHeight
+        }
+        adjustTextareaHeight();        
+    </script>
+{% endblock %}

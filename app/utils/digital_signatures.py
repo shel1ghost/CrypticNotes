@@ -1,11 +1,6 @@
-# digital_signatures.py
-
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-
-#private_key = RSA.import_key(open('private.pem').read())
-#public_key = RSA.import_key(open('public.pem').read())
 
 def sign_note_content(note_title, note_content, private_key_file):
     private_key = RSA.import_key(open(private_key_file).read())

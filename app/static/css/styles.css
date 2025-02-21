@@ -10,6 +10,7 @@ body {
     flex-direction: column;
     /*min-height: 100vh;*/
     background-color: #ecf0f1;
+    height: 100%;
 }
 
 header {
@@ -146,6 +147,9 @@ footer {
     color: #ecf0f1;
     text-align: center;
     padding: 10px;
+    bottom: 0;
+    position: fixed;
+    width: 100%;
 }
 
 footer p {

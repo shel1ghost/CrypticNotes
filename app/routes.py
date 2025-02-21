@@ -28,6 +28,8 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
+        user_exits = Users.query.filter_by(email=email).first()
+
         if not re.match(r'^[A-Za-z\s]{1,100}$', name):
             flash('Name should contain only letters and spaces, up to 100 characters.', 'danger')
         elif not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', email):
@@ -36,6 +38,8 @@ def signup():
             flash('Password must be at least 8 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.', 'danger')
         elif password != confirm_password:
             flash('Passwords do not match. Please try again.', 'danger')
+        elif user_exits:
+            flash('The user with this email id already exists.', 'danger')
         else:
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             new_user = Users(name=name, email=email, password=hashed_password)
@@ -236,7 +240,6 @@ def view_note():
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
             return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
-        #return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
 
 @app.route('/edit_note', methods=['GET', 'POST'])
 @login_required
@@ -426,6 +429,10 @@ def delete_account():
             flash('Password is incorrect.', 'danger')
             render_template('account_deletion.html', password=password, logged_in=True, user_name=user_name)
         else:
+            public_key = os.path.join("rsa_keys", f"public_key_{user_id}.pem")
+            private_key = os.path.join("rsa_keys", f"private_key_{user_id}.pem")
+            os.remove(public_key)
+            os.remove(private_key)
             # Delete all notes associated with the user
             notes = Notes.query.filter_by(user_id=user_id).all()
             for note in notes:
@@ -451,9 +458,11 @@ def delete_account():
             # Clear the session and logout the user
             session.pop('user_id', None)
             session.pop('user_name', None)
-            response = make_response("Cookie has been deleted")
-            response.delete_cookie('remember_token')
-            response.delete_cookie('otp')
+            #response = make_response("Cookie has been deleted")
+            #response.delete_cookie('remember_token')
+            response = make_response(redirect(url_for('two_factor_auth')))
+            response.delete_cookie('remember_token', path='/') 
+            response.delete_cookie('otp', path="/")
             flash('Your account has been deleted successfully.', 'success')
             return redirect(url_for('login'))
 
@@ -491,6 +500,9 @@ def search_note():
     for entry in decrypted_notes:
         if query in entry.get('title').lower():
             search_results.append(entry)
+        
+    if len(search_results) == 0:
+        return render_template_string("<p style='margin: 20px 0px; font-size: 22px;'>No such note found.</p>")
     
     response = '''
         {% for note in search_results %}
@@ -566,9 +578,42 @@ def export_notes():
 
 
 @app.route('/view_shared_note')
-@login_required
 def view_shared_note():
-    pass
+    logged_in = False
+    if(session.get('user_id')):
+        user_name = session.get('user_name')
+        logged_in = True
+    else:
+        user_name = None
+    note_id = request.args.get('note_id')
+    if(note_id is None):
+        return redirect('/view_notes')
+    else:
+        decrypted_note = {}
+        note = Notes.query.filter_by(note_id=note_id).first()
+        key = Keys.query.filter_by(key_id=note.key_id).first()
+        with open(os.path.join("notes", note.filename), 'r') as file:
+            data = json.load(file)
+            decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
+            decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
+            decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+            signature = data['signature']
+
+            dt_object = datetime.fromisoformat(decrypted_last_modified)
+            formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
+        
+            decrypted_note['title'] = decrypted_title
+            decrypted_note['content'] = decrypted_content
+            decrypted_note['last_modified'] = formatted_date_time
+        
+        public_key = os.path.join("rsa_keys", f"public_key_{note.user_id}.pem")
+        valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
+        if valid_signature:
+            flash('The integrity of this note is maintained well.', 'info')
+            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name)
+        else:
+            flash('The integrity of this note seems to be compromised.', 'danger')
+            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name)
 
 
 
