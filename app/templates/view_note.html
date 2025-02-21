@@ -8,6 +8,7 @@
 
 {% block content %}
     <div class="new-note-container">
+            <input type="hidden" id="note_id" value="{{ note_id }}">
             <div class="form-group">
                 <input type="text" id="title" name="title" placeholder="Title" value="{{ note.title }}" readonly>
             </div>
@@ -17,6 +18,12 @@
             </div>
             <button class="delete-btn" onclick="delete_note()">Delete</button>
             <button class="back-btn"><a href="{{ url_for('view_notes') }}">Return</a></button>
+
+            <div class="sharing_options">
+                <h2>Sharing options</h2>
+                <input type="hidden" value="http://127.0.0.1:5000{{ url_for('view_shared_note') }}?note_id={{ note_id }}" id="sharable_link">
+                <button type="button" id="copy_link_btn" onclick="copy_share_link()">Copy Link</button>
+            </div>
 
     </div>
     <script>
@@ -33,5 +40,18 @@
                 window.location.href = "{{ url_for('delete_note', note_id=note_id) }}"
             }
         }
+
+        function copy_share_link(){
+            var link = document.getElementById('sharable_link').value;
+            navigator.clipboard.writeText(link)
+            .then(function() {
+                document.getElementById('copy_link_btn').innerHTML = "Link Copied";
+            })
+            .catch(function(error) {
+                // Handle errors
+                console.error("Error copying link: ", error);
+            });
+        }
+        
     </script>
 {% endblock %}

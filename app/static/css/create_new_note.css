@@ -91,3 +91,27 @@
     background-color: red;
 }
 
+.sharing_options {
+    text-align: center;
+}
+.sharing_options h2 {
+    color: #333;
+    margin-top: 10px;
+}
+
+
+.sharing_options button {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    color: #ecf0f1;
+    background-color: #2980b9;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: inline-flex;
+    margin: 6px 0px;
+}
+
+
+

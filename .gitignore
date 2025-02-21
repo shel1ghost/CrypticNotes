@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 notes/
 *.zip
+rsa_keys/
+*.json

@@ -4,14 +4,17 @@ from app.models import Users, Notes,  Keys
 from app.utils.two_fa_email import send_otp_email, generate_otp
 from app.utils.blowfish import blowfish_encrypt, blowfish_key_schedule, blowfish_round
 from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blowfish, decrypt_content_blowfish
-from app.decorators import login_required
+from app.decorators.decorators import login_required
 from datetime import datetime
 from app.utils.pdf_utils import generate_pdf, create_zip_file, cleanup_files
+from app.utils.digital_signatures import sign_note_content, verify_note_content
+from app.utils.generate_rsa_keys import generate_rsa_keys, serialize_private_key, serialize_public_key
 import re
 import os
 import secrets
 import json
 import pytz
+import uuid
 
 @app.route('/')
 def home():
@@ -38,6 +41,14 @@ def signup():
             new_user = Users(name=name, email=email, password=hashed_password)
             db.session.add(new_user)
             db.session.commit()
+            user = Users.query.filter_by(email=email).first()
+            private_key, public_key = generate_rsa_keys(key_size=2048)
+            private_key_pem = serialize_private_key(private_key)
+            public_key_pem = serialize_public_key(public_key)
+            with open(os.path.join(f"rsa_keys/public_key_{user.user_id}.pem"), "wb") as public_file:
+                public_file.write(public_key_pem)
+            with open(os.path.join(f"rsa_keys/private_key_{user.user_id}.pem"), "wb") as public_file:
+                public_file.write(private_key_pem)
             flash('Your account has been created! You can now log in.', 'success')
             return redirect(url_for('login'))
     user_logged_in = False
@@ -113,6 +124,7 @@ def logout():
 @login_required
 def create_new_note():
     user_name = session.get('user_name')
+    user_id = session.get('user_id')
     if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
@@ -136,6 +148,9 @@ def create_new_note():
         last_modified = localized_time.isoformat()
         encrypted_last_modified = encrypt_content_blowfish(last_modified, key_value)
 
+        private_key = os.path.join("rsa_keys", f"private_key_{user_id}.pem")
+        signature = sign_note_content(title, content, private_key)
+
         # Ensure the notes directory exists
         if not os.path.exists('notes'):
             os.makedirs('notes')
@@ -144,7 +159,7 @@ def create_new_note():
         filename = f"{secrets.token_hex(8)}.json"
         filepath = os.path.join("notes", filename)
         with open(filepath, 'w') as file:
-            json.dump({"title": encrypted_title, "content": encrypted_content, "last_modified": encrypted_last_modified}, file)
+            json.dump({"title": encrypted_title, "content": encrypted_content, "signature": signature, "last_modified": encrypted_last_modified}, file)
         
         # Save key to the database
         new_key = Keys(key_value=key_value)
@@ -192,6 +207,7 @@ def view_notes():
 @login_required
 def view_note():
     user_name = session.get('user_name')
+    user_id = session.get('user_id')
     note_id = request.args.get('note_id')
     if(note_id is None):
         return redirect('/view_notes')
@@ -204,6 +220,7 @@ def view_note():
             decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
             decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
             decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
+            signature = data['signature']
 
             dt_object = datetime.fromisoformat(decrypted_last_modified)
             formatted_date_time = dt_object.strftime("%H:%M %d/%m/%Y")
@@ -211,12 +228,21 @@ def view_note():
             decrypted_note['title'] = decrypted_title
             decrypted_note['content'] = decrypted_content
             decrypted_note['last_modified'] = formatted_date_time
-        return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+        
+        public_key = os.path.join("rsa_keys", f"public_key_{user_id}.pem")
+        valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
+        if valid_signature:
+            return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+        else:
+            flash('The integrity of this note seems to be compromised.', 'danger')
+            return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+        #return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
 
 @app.route('/edit_note', methods=['GET', 'POST'])
 @login_required
 def edit_note():
     user_name = session.get('user_name')
+    user_id = session.get('user_id')
     note_id = request.args.get('note_id')
 
     if request.method == 'POST':
@@ -242,10 +268,13 @@ def edit_note():
         last_modified = localized_time.isoformat()
         encrypted_last_modified = encrypt_content_blowfish(last_modified, key.key_value)
 
+        private_key = os.path.join("rsa_keys", f"private_key_{user_id}.pem")
+        signature = sign_note_content(title, content, private_key)
+
         filename = note.filename
         filepath = os.path.join("notes", filename)
         with open(filepath, 'w') as file:
-            json.dump({"title": encrypted_title, "content": encrypted_content, "last_modified": encrypted_last_modified}, file)
+            json.dump({"title": encrypted_title, "content": encrypted_content, "signature": signature, "last_modified": encrypted_last_modified}, file)
         
         flash('Note updated successfully!', 'success')
         return redirect(url_for('dashboard', logged_in=True, user_name=user_name))
@@ -422,6 +451,7 @@ def delete_account():
             # Clear the session and logout the user
             session.pop('user_id', None)
             session.pop('user_name', None)
+            response = make_response("Cookie has been deleted")
             response.delete_cookie('remember_token')
             response.delete_cookie('otp')
             flash('Your account has been deleted successfully.', 'success')
@@ -433,7 +463,6 @@ def delete_account():
 @login_required
 def search_note():
     query = request.form['query'].lower()
-    print(query)
     user_id = session.get('user_id')
     user_name = session.get('user_name')
     notes = Notes.query.filter_by(user_id=user_id).all()
@@ -534,5 +563,12 @@ def export_notes():
     cleanup_files(pdf_filenames)
 
     return response
+
+
+@app.route('/view_shared_note')
+@login_required
+def view_shared_note():
+    pass
+
 
 
