@@ -88,6 +88,10 @@ p {
     text-align: center;
 }
 
+.content-container p {
+    text-align: justify;
+}
+
 .signup-link {
     text-decoration: none;
 }

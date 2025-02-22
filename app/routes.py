@@ -48,20 +48,6 @@ def signup():
             session['otp'] = otp
             send_otp_email(email, otp)
             return redirect(url_for('verify_email'))
-            '''hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-            new_user = Users(name=name, email=email, password=hashed_password)
-            db.session.add(new_user)
-            db.session.commit()
-            user = Users.query.filter_by(email=email).first()
-            private_key, public_key = generate_rsa_keys(key_size=2048)
-            private_key_pem = serialize_private_key(private_key)
-            public_key_pem = serialize_public_key(public_key)
-            with open(os.path.join(f"rsa_keys/public_key_{user.user_id}.pem"), "wb") as public_file:
-                public_file.write(public_key_pem)
-            with open(os.path.join(f"rsa_keys/private_key_{user.user_id}.pem"), "wb") as public_file:
-                public_file.write(private_key_pem)
-            flash('Your account has been created! You can now log in.', 'success')
-            return redirect(url_for('login'))'''
     user_logged_in = False
     return render_template('signup.html')
 
@@ -107,7 +93,7 @@ def login():
         if user and bcrypt.check_password_hash(user.password, password):
             session['user_id'] = user.user_id
             session['user_name'] = user.name
-            if request.cookies.get('remember_token') == 'true':
+            if request.cookies.get('remember_token') == 'true' and request.cookies.get('username') == user.name:
                 #flash('Login successful! Welcome back.', 'success')
                 return redirect(url_for('dashboard'))
 
@@ -136,6 +122,7 @@ def two_factor_auth():
             
             if remember:
                 response = make_response(redirect(url_for('dashboard')))
+                response.set_cookie('username', session.get('user_name'))
                 response.set_cookie('remember_token', 'true', max_age=60*24*60*60)  # 60 days
                 session.pop('otp', None)
                 return response
@@ -319,7 +306,7 @@ def edit_note():
             json.dump({"title": encrypted_title, "content": encrypted_content, "signature": signature, "last_modified": encrypted_last_modified}, file)
         
         flash('Note updated successfully!', 'success')
-        return redirect(url_for('dashboard', logged_in=True, user_name=user_name))
+        return redirect(url_for('view_notes', logged_in=True, user_name=user_name))
         
     
     if(note_id is None):

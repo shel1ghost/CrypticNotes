@@ -25,7 +25,7 @@
     <b>Subkey generation: </b>
     A key of size 32 to 448 bits is kept inside an array as [K1, K2, .... Kn] where n is greater than 1 and less than 14.
     Here, every K have value of 32 bit, so total K value = 32x14 = 448 bits. The subkeys generated for the current encryption process are: <br/>
-    <b>{{ data['subkeys'] }}</b> 
+    <b>{{ data['subkeys'] }}</b><br/>
     After this, P-Array is initialized as [P1, P2 .... P18] which is of size 32 bits and 4 S-Boxes s1, s2, s3 and s4. Then bitwise XOR operation is performed as:
     <ul><li>P1 = P1 XOR K1</li><li>P2 = P2 XOR K2</li><li>P14 = P14 XOR K14</li></ul></p>
     <p class="enc_details">
