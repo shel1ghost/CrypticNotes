@@ -8,16 +8,12 @@
 
 {% block content %}
     <div class="otp-container">
-        <h1>OTP Verification</h1>
+        <h1>Email Verification</h1>
         <p>Enter the 4 digit OTP sent to your email</p>
-        <form action="/two_factor_auth" method="POST">
+        <form action="/verify_email" method="POST">
             <div class="form-group">
-                <input type="text" id="otp" name="otp" maxlength="6" required>
+                <input type="text" id="otp" name="otp" maxlength="4" required>
             </div>
-            <div class="form-group checkbox-group">
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Don't ask code for this device again</label>
-            </div><br/>
             <button type="submit" class="submit-btn">Submit</button>
         </form>
     </div>

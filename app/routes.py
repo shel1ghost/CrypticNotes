@@ -41,7 +41,14 @@ def signup():
         elif user_exits:
             flash('The user with this email id already exists.', 'danger')
         else:
-            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            session['email'] = email
+            session['name'] = name
+            session['password'] = password
+            otp = generate_otp()
+            session['otp'] = otp
+            send_otp_email(email, otp)
+            return redirect(url_for('verify_email'))
+            '''hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             new_user = Users(name=name, email=email, password=hashed_password)
             db.session.add(new_user)
             db.session.commit()
@@ -54,9 +61,41 @@ def signup():
             with open(os.path.join(f"rsa_keys/private_key_{user.user_id}.pem"), "wb") as public_file:
                 public_file.write(private_key_pem)
             flash('Your account has been created! You can now log in.', 'success')
-            return redirect(url_for('login'))
+            return redirect(url_for('login'))'''
     user_logged_in = False
     return render_template('signup.html')
+
+@app.route('/verify_email', methods=['GET', 'POST'])
+def verify_email():
+    if request.method == 'POST':
+        otp_code = request.form.get('otp')
+        if str(otp_code) == str(session.get('otp')):
+            name = session.get('name')
+            email = session.get('email')
+            password = session.get('password')
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            new_user = Users(name=name, email=email, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
+            user = Users.query.filter_by(email=email).first()
+            private_key, public_key = generate_rsa_keys(key_size=2048)
+            private_key_pem = serialize_private_key(private_key)
+            public_key_pem = serialize_public_key(public_key)
+            with open(os.path.join(f"rsa_keys/public_key_{user.user_id}.pem"), "wb") as public_file:
+                public_file.write(public_key_pem)
+            with open(os.path.join(f"rsa_keys/private_key_{user.user_id}.pem"), "wb") as public_file:
+                public_file.write(private_key_pem)
+            session.pop('otp', None)
+            session.pop('name', None)
+            session.pop('email', None)
+            session.pop('password', None)
+            flash('Your account has been created! You can now log in.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash("Incorrect OTP code. Email verification failed!")
+            return redirect(url_for('signup'))
+    return render_template('verify_email.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
