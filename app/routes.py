@@ -1,4 +1,4 @@
-from flask import render_template, render_template_string, url_for, flash, redirect, request, session, make_response, jsonify, send_file
+from flask import render_template, render_template_string, url_for, flash, redirect, request, session, make_response, jsonify, send_file, abort
 from app import app, db, bcrypt
 from app.models import Users, Notes,  Keys
 from app.utils.two_fa_email import send_otp_email, generate_otp
@@ -9,6 +9,7 @@ from datetime import datetime
 from app.utils.pdf_utils import generate_pdf, create_zip_file, cleanup_files
 from app.utils.digital_signatures import sign_note_content, verify_note_content
 from app.utils.generate_rsa_keys import generate_rsa_keys, serialize_private_key, serialize_public_key
+from app.utils.random_id import generate_random_md5_with_number, extract_number_from_result
 import re
 import os
 import secrets
@@ -122,7 +123,7 @@ def two_factor_auth():
             
             if remember:
                 response = make_response(redirect(url_for('dashboard')))
-                response.set_cookie('username', session.get('user_name'))
+                response.set_cookie('username', session.get('user_name'), max_age=60*24*60*60)
                 response.set_cookie('remember_token', 'true', max_age=60*24*60*60)  # 60 days
                 session.pop('otp', None)
                 return response
@@ -217,6 +218,7 @@ def view_notes():
 
     for note in notes:
         key = Keys.query.filter_by(key_id=note.key_id).first()
+        generated_id = generate_random_md5_with_number(note.note_id)
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
             decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
@@ -228,7 +230,8 @@ def view_notes():
                 "note_id": note.note_id,
                 "title": decrypted_title,
                 "content": decrypted_content,
-                "last_modified": formatted_date_time
+                "last_modified": formatted_date_time,
+                "generated_id": generated_id
             })
     
     return render_template('view_notes.html', notes=decrypted_notes, logged_in=True, user_name=user_name)
@@ -238,13 +241,15 @@ def view_notes():
 def view_note():
     user_name = session.get('user_name')
     user_id = session.get('user_id')
-    note_id = request.args.get('note_id')
+    req_id = request.args.get('note_id')
+    note_id = extract_number_from_result(req_id)
     if(note_id is None):
         return redirect('/view_notes')
     else:
         decrypted_note = {}
         note = Notes.query.filter_by(note_id=note_id).first()
         key = Keys.query.filter_by(key_id=note.key_id).first()
+        #generated_id = generate_random_md5_with_number(note_id)
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
             decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
@@ -262,17 +267,18 @@ def view_note():
         public_key = os.path.join("rsa_keys", f"public_key_{user_id}.pem")
         valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
         if valid_signature:
-            return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name)
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
-            return render_template('view_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name)
 
 @app.route('/edit_note', methods=['GET', 'POST'])
 @login_required
 def edit_note():
     user_name = session.get('user_name')
     user_id = session.get('user_id')
-    note_id = request.args.get('note_id')
+    req_id = request.args.get('note_id')
+    note_id = extract_number_from_result(req_id)
 
     if request.method == 'POST':
         title = request.form.get('title')
@@ -327,13 +333,14 @@ def edit_note():
             decrypted_note['title'] = decrypted_title
             decrypted_note['content'] = decrypted_content
             decrypted_note['last_modified'] = formatted_date_time
-        return render_template('edit_note.html', note=decrypted_note, note_id=note_id, logged_in=True, user_name=user_name)
+        return render_template('edit_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name)
 
 @app.route('/delete_note')
 @login_required
 def delete_note():
     user_name = session.get('user_name')
-    note_id = request.args.get('note_id')
+    req_id = request.args.get('note_id')
+    note_id = extract_number_from_result(req_id)
     note = Notes.query.get_or_404(note_id)
     key_id = note.key_id
     
@@ -615,8 +622,11 @@ def view_shared_note():
     if(note_id is None):
         return redirect('/view_notes')
     else:
+        note_id = extract_number_from_result(note_id)
         decrypted_note = {}
         note = Notes.query.filter_by(note_id=note_id).first()
+        if not note:
+            abort(404)
         key = Keys.query.filter_by(key_id=note.key_id).first()
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
