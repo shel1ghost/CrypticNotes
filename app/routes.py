@@ -10,12 +10,14 @@ from app.utils.pdf_utils import generate_pdf, create_zip_file, cleanup_files
 from app.utils.digital_signatures import sign_note_content, verify_note_content
 from app.utils.generate_rsa_keys import generate_rsa_keys, serialize_private_key, serialize_public_key
 from app.utils.random_id import generate_random_md5_with_number, extract_number_from_result
+from werkzeug.utils import secure_filename
 import re
 import os
 import secrets
 import json
 import pytz
 import uuid
+import base64
 
 @app.route('/')
 def home():
@@ -159,6 +161,20 @@ def create_new_note():
     if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
+        canvas_data = request.form.get('canvas_data')
+        filename = f"{secure_filename(title)}_{datetime.utcnow().timestamp()}"
+        canvas_filename = None
+        if canvas_data and canvas_data.startswith('data:image'):
+            # Extract base64 content
+            header, encoded = canvas_data.split(",", 1)
+            image_data = base64.b64decode(encoded)
+
+            # Save file to static/uploads
+            canvas_filename = f"{filename}.png"
+            save_path = os.path.join('app/static/uploads', canvas_filename)
+
+            with open(save_path, 'wb') as f:
+                f.write(image_data)
 
         # Server-side validation for title and content
         if not title or len(title) > 100:
@@ -198,7 +214,7 @@ def create_new_note():
         db.session.commit()
 
         # Save note information to the database
-        new_note = Notes(user_id=session['user_id'], filename=filename, key_id=new_key.key_id)
+        new_note = Notes(user_id=session['user_id'], filename=filename, key_id=new_key.key_id, canvas_filename=canvas_filename)
         db.session.add(new_note)
         db.session.commit()
         
@@ -247,8 +263,11 @@ def view_note():
         return redirect('/view_notes')
     else:
         decrypted_note = {}
+        canvas_filename = None
         note = Notes.query.filter_by(note_id=note_id).first()
         key = Keys.query.filter_by(key_id=note.key_id).first()
+        if note.canvas_filename is not None:
+            canvas_filename = note.canvas_filename
         #generated_id = generate_random_md5_with_number(note_id)
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
@@ -267,10 +286,10 @@ def view_note():
         public_key = os.path.join("rsa_keys", f"public_key_{user_id}.pem")
         valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
         if valid_signature:
-            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename)
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
-            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename)
 
 @app.route('/edit_note', methods=['GET', 'POST'])
 @login_required
@@ -343,6 +362,12 @@ def delete_note():
     note_id = extract_number_from_result(req_id)
     note = Notes.query.get_or_404(note_id)
     key_id = note.key_id
+    canvas_filename = None
+    if note.canvas_filename is not None:
+            canvas_filename = note.canvas_filename
+            delete_path = os.path.join('app/static/uploads', canvas_filename)
+            if os.path.exists(delete_path):  # Check if the file exists
+                os.remove(delete_path) 
     
     # Delete the note file from the file system
     try:
@@ -565,7 +590,10 @@ def export_notes():
     decrypted_notes = []
 
     for note in notes:
+        canvas_filename = None
         key = Keys.query.filter_by(key_id=note.key_id).first()
+        if note.canvas_filename is not None:
+            canvas_filename = note.canvas_filename
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
             decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
@@ -577,7 +605,8 @@ def export_notes():
                 "note_id": note.note_id,
                 "title": decrypted_title,
                 "content": decrypted_content,
-                "last_modified": formatted_date_time
+                "last_modified": formatted_date_time,
+                "canvas_filename": canvas_filename
             })
 
     # Automatically get the base path of the current file (app.py)
@@ -593,8 +622,9 @@ def export_notes():
     for item in decrypted_notes:
         title = item.get('title', 'Untitled')
         content = item.get('content', 'No content')
+        canvas_filename = item.get('canvas_filename', None)
         pdf_filename = os.path.join(temp_dir, f'{title}.pdf')
-        generate_pdf(title, content, pdf_filename)
+        generate_pdf(title, content, pdf_filename, canvas_filename)
         pdf_filenames.append(pdf_filename)
 
     # Create a zip file containing all PDFs in the base path
@@ -624,9 +654,12 @@ def view_shared_note():
     else:
         note_id = extract_number_from_result(note_id)
         decrypted_note = {}
+        canvas_filename = None
         note = Notes.query.filter_by(note_id=note_id).first()
         if not note:
             abort(404)
+        if note.canvas_filename is not None:
+            canvas_filename = note.canvas_filename
         key = Keys.query.filter_by(key_id=note.key_id).first()
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
@@ -646,10 +679,10 @@ def view_shared_note():
         valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
         if valid_signature:
             flash('The integrity of this note is maintained well.', 'info')
-            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name)
+            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name, canvas_filename=canvas_filename)
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
-            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name)
+            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name, canvas_filename=canvas_filename)
 
 
 

@@ -14,6 +14,10 @@
             </div>
             <div class="form-group">
                 <textarea id="content" name="content" placeholder="Enter text here..." readonly>{{ note.content }}</textarea>
+                {% if canvas_filename %}
+                    <h3>Canvas</h3>
+                    <img id="drawingCanvasNote" src="{{ url_for('static', filename='uploads/' ~ canvas_filename) }}" alt="Canvas Image" style="max-width:100%;">
+                {% endif %}
                 <p><small>Last Modified: {{ note.last_modified }}</small></p>
             </div>
             <button class="delete-btn" onclick="delete_note()">Delete</button>

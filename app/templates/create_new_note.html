@@ -7,17 +7,144 @@
 {% endblock %}
 
 {% block content %}
+<form action="{{ url_for('create_new_note') }}" method="POST" onsubmit="return saveCanvasToForm()">
+    <div class="main">
     <div class="new-note-container">
         <h1>Create New Note</h1>
-        <form action="{{ url_for('create_new_note') }}" method="POST">
+        
             <div class="form-group">
                 <input type="text" id="title" name="title" placeholder="Title">
             </div>
             <div class="form-group">
-                <textarea id="content" name="content" rows="15" placeholder="Enter text here..."></textarea>
+                <textarea id="content" name="content" rows="14" placeholder="Enter text here..."></textarea>
             </div>
-            <button type="submit" class="save-btn">Save</button>
+            <input type="hidden" id="canvasData" name="canvas_data">
+            <button type="submit" class="save-btn" onclick="saveCanvasToForm()">Save</button>
             <button type="button" class="cancel-btn" onclick="location.href='{{ url_for('dashboard') }}'">Cancel</button>
-        </form>
+        
     </div>
+    <div class="canvas-container">
+        <h1>Add a canvas to your note</h1>
+        <canvas id="drawingCanvas" width="600" height="410" style="border:1px solid #000;"></canvas>
+        <br>
+        <button type="button" id="undoButton" onclick="undo()">Undo</button>
+        <button type="button" id="redoButton" onclick="redo()">Redo</button>
+        <button type="button" id="eraserButton" onclick="toggleEraser()">Eraser</button>
+        <input type="color" id="colorPicker" value="#000000">
+        <label for="penSize">Pen Size:</label>
+        <input type="range" id="penSize" min="1" max="20" value="2">
+    </div>
+    </div>
+</form>
+    <script>
+        const canvas = document.getElementById("drawingCanvas");
+        const ctx = canvas.getContext("2d");
+    
+        const colorPicker = document.getElementById("colorPicker");
+        const penSize = document.getElementById("penSize");
+        const eraserButton = document.getElementById("eraserButton");
+    
+        let isDrawing = false;
+        let isErasing = false;
+        let currentColor = colorPicker.value;
+    
+        let undoStack = [];
+        let redoStack = [];
+    
+        // Initialize
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = penSize.value;
+    
+        // Update color
+        colorPicker.addEventListener("change", (e) => {
+            currentColor = e.target.value;
+            if (!isErasing) {
+                ctx.strokeStyle = currentColor;
+            }
+        });
+    
+        // Update pen size
+        penSize.addEventListener("input", (e) => {
+            ctx.lineWidth = e.target.value;
+        });
+    
+        // Start drawing
+        canvas.addEventListener("mousedown", (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+    
+            undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            redoStack = [];
+        });
+    
+        // Draw
+        canvas.addEventListener("mousemove", (e) => {
+            if (isDrawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }
+        });
+    
+        // Stop drawing
+        canvas.addEventListener("mouseup", () => isDrawing = false);
+        canvas.addEventListener("mouseleave", () => isDrawing = false);
+    
+        // Undo
+        function undo() {
+            if (undoStack.length > 0) {
+                redoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+                const lastImage = undoStack.pop();
+                ctx.putImageData(lastImage, 0, 0);
+            }
+        }
+    
+        // Redo
+        function redo() {
+            if (redoStack.length > 0) {
+                undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+                const nextImage = redoStack.pop();
+                ctx.putImageData(nextImage, 0, 0);
+            }
+        }
+    
+        // Toggle Eraser Mode
+        function toggleEraser() {
+            isErasing = !isErasing;
+    
+            if (isErasing) {
+                ctx.strokeStyle = "#FFFFFF"; // White background
+                eraserButton.classList.add("active");
+            } else {
+                ctx.strokeStyle = currentColor;
+                eraserButton.classList.remove("active");
+            }
+        }
+
+        function saveCanvasToForm() {
+        const canvas = document.getElementById("drawingCanvas");
+        const hiddenInput = document.getElementById("canvasData");
+
+        if (!isCanvasBlank(canvas)) {
+            const dataURL = canvas.toDataURL("image/png");
+            hiddenInput.value = dataURL;
+        } else {
+            hiddenInput.value = ""; // Clear it if blank
+        }
+        return true;
+        }
+
+        function isCanvasBlank(canvas) {
+            const ctx = canvas.getContext('2d');
+            const pixelBuffer = new Uint32Array(
+            ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+        );
+
+        return !pixelBuffer.some(color => color !== 0);
+        }
+
+    </script>
+    
+    </body>
+    </html>
 {% endblock %}

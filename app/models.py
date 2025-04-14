@@ -19,6 +19,7 @@ class Notes(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
     filename = db.Column(db.String(120), nullable=False)
     key_id = db.Column(db.Integer, db.ForeignKey('keys.key_id'), nullable=False)
+    canvas_filename = db.Column(db.String(255), nullable=True)
     user = db.relationship('Users', backref=db.backref('notes', lazy=True))
     key = db.relationship('Keys', backref=db.backref('notes', cascade='all, delete-orphan', lazy=True))
     # Add more fields as needed
