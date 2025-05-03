@@ -7,9 +7,11 @@ from app.utils.blowfish_encryption import generate_md5_key, encrypt_content_blow
 from app.decorators.decorators import login_required
 from datetime import datetime
 from app.utils.pdf_utils import generate_pdf, create_zip_file, cleanup_files
-from app.utils.digital_signatures import sign_note_content, verify_note_content
+from app.utils.digital_signatures import sign_note_content, verify_note_content, get_hash_and_signature
 from app.utils.generate_rsa_keys import generate_rsa_keys, serialize_private_key, serialize_public_key
 from app.utils.random_id import generate_random_md5_with_number, extract_number_from_result
+from app.utils.chaotic_image_encryption import encrypt_image, decrypt_image
+from app.utils.image_encryption_process import encryption_process
 from werkzeug.utils import secure_filename
 import re
 import os
@@ -18,6 +20,16 @@ import json
 import pytz
 import uuid
 import base64
+import cv2
+import numpy as np
+
+def background_encryption_process(image_path):
+    """Background task for encryption."""
+    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    img = cv2.resize(img, (256, 256))  # Resize for consistency
+    encrypted = encrypt(img)  # Encrypt image
+    cv2.imwrite("encrypted.png", encrypted)
+    print("Encryption process completed in the background!")
 
 @app.route('/')
 def home():
@@ -170,11 +182,46 @@ def create_new_note():
             image_data = base64.b64decode(encoded)
 
             # Save file to static/uploads
-            canvas_filename = f"{filename}.png"
-            save_path = os.path.join('app/static/uploads', canvas_filename)
-
+            #canvas_filename = f"{filename}.png"
+            #save_path = os.path.join('app/static/uploads', canvas_filename)
+            #with open(save_path, 'wb') as f:
+            #    f.write(image_data)
+            encrypted_filename = f"{filename}.png"
+            save_path = os.path.join('app/static/uploads', encrypted_filename)
             with open(save_path, 'wb') as f:
                 f.write(image_data)
+            
+            img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
+
+            if img is not None and len(img.shape) == 3 and img.shape[2] == 4:
+    
+                b, g, r, a = cv2.split(img)
+                white_bg = np.ones_like(a) * 255
+                alpha = a.astype(float) / 255
+                b = b * alpha + white_bg * (1 - alpha)
+                g = g * alpha + white_bg * (1 - alpha)
+                r = r * alpha + white_bg * (1 - alpha)
+                img = cv2.merge([b.astype(np.uint8), g.astype(np.uint8), r.astype(np.uint8)])
+
+            img = cv2.resize(img, (420, 420))  # Ensure square image
+
+            a, b = 1, 1
+            iterations = 10
+            x0 = 0.6
+            r = 3.99
+
+            encrypted = encrypt_image(img, a, b, iterations, x0, r)
+            np.save(os.path.join('app/static/uploads', f'{filename}.npy'), encrypted)
+
+            #decrypted = decrypt_image(encrypted, a, b, iterations, x0, r)
+
+            #dec_save_path = os.path.join('app/static/uploads', f"decrypted_{encrypted_filename}")
+            
+            
+            # Save results
+            #cv2.imwrite(save_path, encrypted)
+            #cv2.imwrite(dec_save_path, decrypted)
+            
 
         # Server-side validation for title and content
         if not title or len(title) > 100:
@@ -214,7 +261,7 @@ def create_new_note():
         db.session.commit()
 
         # Save note information to the database
-        new_note = Notes(user_id=session['user_id'], filename=filename, key_id=new_key.key_id, canvas_filename=canvas_filename)
+        new_note = Notes(user_id=session['user_id'], filename=filename, key_id=new_key.key_id, canvas_filename=encrypted_filename)
         db.session.add(new_note)
         db.session.commit()
         
@@ -267,7 +314,20 @@ def view_note():
         note = Notes.query.filter_by(note_id=note_id).first()
         key = Keys.query.filter_by(key_id=note.key_id).first()
         if note.canvas_filename is not None:
-            canvas_filename = note.canvas_filename
+            encrypted_filename = note.canvas_filename
+            save_path = os.path.join('app/static/uploads', encrypted_filename)
+            #with open(save_path, 'wb') as f:
+            #    f.write(image_data)
+            a, b = 1, 1
+            iterations = 10
+            x0 = 0.6
+            r = 3.99
+            encrypted = np.load(os.path.join('app/static/uploads', f'{encrypted_filename.replace(".png", "")}.npy'))
+            decrypted = decrypt_image(encrypted, a, b, iterations, x0, r)
+            
+            canvas_filename = f"decrypted_{encrypted_filename}"
+            dec_save_path = os.path.join('app/static/uploads', canvas_filename)
+            cv2.imwrite(dec_save_path, decrypted)
         #generated_id = generate_random_md5_with_number(note_id)
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
@@ -676,10 +736,15 @@ def view_shared_note():
             decrypted_note['last_modified'] = formatted_date_time
         
         public_key = os.path.join("rsa_keys", f"public_key_{note.user_id}.pem")
+        private_key = os.path.join("rsa_keys", f"private_key_{note.user_id}.pem")
         valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
         if valid_signature:
+            verified_hash_and_signature = get_hash_and_signature(decrypted_note['title'], decrypted_note['content'], private_key, public_key)
+            original_hash = verified_hash_and_signature['computed_hash']
+            verified_hash = verified_hash_and_signature['verified_hash']
+            digital_signature = verified_hash_and_signature['digital_signature']
             flash('The integrity of this note is maintained well.', 'info')
-            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name, canvas_filename=canvas_filename)
+            return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name, canvas_filename=canvas_filename, verified_hash=verified_hash, original_hash=original_hash, digital_signature=digital_signature)
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
             return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name, canvas_filename=canvas_filename)

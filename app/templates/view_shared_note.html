@@ -19,6 +19,15 @@
                     <img id="drawingCanvasNote" src="{{ url_for('static', filename='uploads/' ~ canvas_filename) }}" alt="Canvas Image" style="max-width:100%;">
                 {% endif %}
             </div>
+            <div class="form-group">
+                <h3>Digital signatures information:</h3>
+                <h4>Original data hash</h4>
+                <p class="hash_value">{{original_hash}}</p>
+                <h4>Recieved data hash</h4>
+                <p class="hash_value">{{verified_hash}}</p>
+                <h4>Digital signature</h4>
+                <p class="hash_value">{{digital_signature}}</p>
+            </div>
     </div>
     <script>
         const textarea = document.getElementById('content');

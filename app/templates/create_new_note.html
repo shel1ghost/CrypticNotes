@@ -25,13 +25,13 @@
     </div>
     <div class="canvas-container">
         <h1>Add a canvas to your note</h1>
-        <canvas id="drawingCanvas" width="600" height="410" style="border:1px solid #000;"></canvas>
+        <canvas id="drawingCanvas" width="420" height="420" style="border:1px solid #000;"></canvas>
         <br>
         <button type="button" id="undoButton" onclick="undo()">Undo</button>
         <button type="button" id="redoButton" onclick="redo()">Redo</button>
         <button type="button" id="eraserButton" onclick="toggleEraser()">Eraser</button>
-        <input type="color" id="colorPicker" value="#000000">
-        <label for="penSize">Pen Size:</label>
+        <input type="color" id="colorPicker" value="#000000"><br/>
+        <label for="penSize" style="margin: 4px">Pen Size:</label>
         <input type="range" id="penSize" min="1" max="20" value="2">
     </div>
     </div>

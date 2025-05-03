@@ -165,6 +165,21 @@ h3 {
     margin: 4px;
 }
 
+h4 {
+    color: #333;
+    margin: 10px;
+}
+
+.hash_value {
+    word-wrap: break-word; /* Ensures the hash fits within the container */
+    overflow-wrap: break-word;
+    width: 100%; /* Adjust width as needed */
+    margin: 0 auto; /* Centers the paragraph on the page */
+    font-family: monospace; /* Gives it a code-like appearance */
+    background-color: #f4f4f4; /* Adds some background styling */
+    padding: 10px;
+    border-radius: 5px;
+}
 
 
 
