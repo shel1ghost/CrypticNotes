@@ -60,7 +60,7 @@
     margin: 4px;
 }
 
-.save-btn, .back-btn, .delete-btn, .cancel-btn{
+.save-btn, .back-btn, .delete-btn, .cancel-btn, .view-image-enc-btn{
     width: 100px;
     padding: 10px 20px;
     font-size: 1.2em;
@@ -75,6 +75,11 @@
 }
 
 .back-btn a{
+    text-decoration: none;
+    color: #ecf0f1;
+}
+
+.view-image-enc-btn a{
     text-decoration: none;
     color: #ecf0f1;
 }
@@ -179,6 +184,10 @@ h4 {
     background-color: #f4f4f4; /* Adds some background styling */
     padding: 10px;
     border-radius: 5px;
+}
+
+.view-image-enc-btn {
+    width: 280px;
 }
 
 

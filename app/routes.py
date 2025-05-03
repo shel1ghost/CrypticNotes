@@ -22,14 +22,29 @@ import uuid
 import base64
 import cv2
 import numpy as np
+import threading
 
-def background_encryption_process(image_path):
-    """Background task for encryption."""
-    img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-    img = cv2.resize(img, (256, 256))  # Resize for consistency
-    encrypted = encrypt(img)  # Encrypt image
-    cv2.imwrite("encrypted.png", encrypted)
-    print("Encryption process completed in the background!")
+def background_encryption_process(save_path, filename):
+    img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
+    if img is not None and len(img.shape) == 3 and img.shape[2] == 4:
+        b, g, r, a = cv2.split(img)
+        white_bg = np.ones_like(a) * 255
+        alpha = a.astype(float) / 255
+        b = b * alpha + white_bg * (1 - alpha)
+        g = g * alpha + white_bg * (1 - alpha)
+        r = r * alpha + white_bg * (1 - alpha)
+        img = cv2.merge([b.astype(np.uint8), g.astype(np.uint8), r.astype(np.uint8)])
+
+    img = cv2.resize(img, (420, 420))  # Ensure square image
+
+    a, b = 1, 1
+    iterations = 10
+    x0 = 0.6
+    r = 3.99
+
+    encrypted = encryption_process(img, filename, a, b, iterations, x0, r)
+    np.save(os.path.join('app/static/uploads', f'{filename}.npy'), encrypted)
+    cv2.imwrite(os.path.join('app/static/uploads', f'encrypted_{filename}.png'), encrypted)
 
 @app.route('/')
 def home():
@@ -190,8 +205,12 @@ def create_new_note():
             save_path = os.path.join('app/static/uploads', encrypted_filename)
             with open(save_path, 'wb') as f:
                 f.write(image_data)
+
+            thread = threading.Thread(target=background_encryption_process, args=(save_path,filename))
+            thread.start()
+
             
-            img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
+            '''img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
 
             if img is not None and len(img.shape) == 3 and img.shape[2] == 4:
     
@@ -211,7 +230,7 @@ def create_new_note():
             r = 3.99
 
             encrypted = encrypt_image(img, a, b, iterations, x0, r)
-            np.save(os.path.join('app/static/uploads', f'{filename}.npy'), encrypted)
+            np.save(os.path.join('app/static/uploads', f'{filename}.npy'), encrypted)'''
 
             #decrypted = decrypt_image(encrypted, a, b, iterations, x0, r)
 
@@ -314,21 +333,22 @@ def view_note():
         note = Notes.query.filter_by(note_id=note_id).first()
         key = Keys.query.filter_by(key_id=note.key_id).first()
         if note.canvas_filename is not None:
-            encrypted_filename = note.canvas_filename
-            save_path = os.path.join('app/static/uploads', encrypted_filename)
-            #with open(save_path, 'wb') as f:
-            #    f.write(image_data)
-            a, b = 1, 1
-            iterations = 10
-            x0 = 0.6
-            r = 3.99
-            encrypted = np.load(os.path.join('app/static/uploads', f'{encrypted_filename.replace(".png", "")}.npy'))
-            decrypted = decrypt_image(encrypted, a, b, iterations, x0, r)
+            if os.path.exists(os.path.join('app/static/uploads', f"decrypted_{note.canvas_filename}")):  # Check if the file exists
+               canvas_filename = f"decrypted_{note.canvas_filename}"
+            else:
+                encrypted_filename = note.canvas_filename
+                save_path = os.path.join('app/static/uploads', encrypted_filename)
+                a, b = 1, 1
+                iterations = 10
+                x0 = 0.6
+                r = 3.99
+                encrypted = np.load(os.path.join('app/static/uploads', f'{encrypted_filename.replace(".png", "")}.npy'))
+                decrypted = decrypt_image(encrypted, a, b, iterations, x0, r)
             
-            canvas_filename = f"decrypted_{encrypted_filename}"
-            dec_save_path = os.path.join('app/static/uploads', canvas_filename)
-            cv2.imwrite(dec_save_path, decrypted)
-        #generated_id = generate_random_md5_with_number(note_id)
+                canvas_filename = f"decrypted_{encrypted_filename}"
+                dec_save_path = os.path.join('app/static/uploads', canvas_filename)
+                cv2.imwrite(dec_save_path, decrypted)
+        
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
             decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
@@ -426,8 +446,20 @@ def delete_note():
     if note.canvas_filename is not None:
             canvas_filename = note.canvas_filename
             delete_path = os.path.join('app/static/uploads', canvas_filename)
+            phase1_path = os.path.join('app/static/uploads', f"phase1_{canvas_filename}")
+            phase2_path = os.path.join('app/static/uploads', f"phase2_{canvas_filename}")
+            numpy_array_path = os.path.join('app/static/uploads', canvas_filename.replace(".png", ".npy"))
+            decrypted_image_path = os.path.join('app/static/uploads', f"decrypted_{canvas_filename}")
             if os.path.exists(delete_path):  # Check if the file exists
                 os.remove(delete_path) 
+            if os.path.exists(phase1_path):  # Check if the file exists
+                os.remove(phase1_path) 
+            if os.path.exists(phase2_path):  # Check if the file exists
+                os.remove(phase2_path) 
+            if os.path.exists(numpy_array_path):  # Check if the file exists
+                os.remove(numpy_array_path) 
+            if os.path.exists(decrypted_image_path):  # Check if the file exists
+                os.remove(decrypted_image_path) 
     
     # Delete the note file from the file system
     try:
@@ -749,5 +781,16 @@ def view_shared_note():
             flash('The integrity of this note seems to be compromised.', 'danger')
             return render_template('view_shared_note.html', note=decrypted_note, note_id=note_id, logged_in=logged_in, user_name=user_name, canvas_filename=canvas_filename)
 
-
+@app.route('/view_image_encryption_process', methods=['GET'])
+def view_image_encryption_process():
+    logged_in = False
+    if(session.get('user_id')):
+        user_name = session.get('user_name')
+        logged_in = True
+    else:
+        user_name = None
+    #image_array = np.load(os.path.join('app/static/uploads', request.args.get('image_name').replace("decrypted_", "").replace(".png", ".npy")))
+    image_name = request.args.get('image_name').replace("decrypted_", "").replace(".png", "")
+    return render_template('view_image_encryption_process.html', image_name=image_name, logged_in=logged_in, user_name=user_name) 
+    
 

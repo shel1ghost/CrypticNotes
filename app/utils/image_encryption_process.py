@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import os
 
 # === CHAOTIC FUNCTION (Logistic Map for diffusion) ===
 def logistic_map(x, r, size):
@@ -60,34 +61,12 @@ def encryption_process(image, encrypted_filename, a=1, b=1, iterations=10, x0=0.
         diffused_image[:, :, c] = diffused
 
     # Save phases
-    phase1_save_path = os.path.join('app/static/uploads', f"phase1 +{encrypted_filename}")
-    phase2_save_path = os.path.join('app/static/uploads', f"phase2 +{encrypted_filename}")
+    phase1_save_path = os.path.join('app/static/uploads', f"phase1_{encrypted_filename}.png")
+    phase2_save_path = os.path.join('app/static/uploads', f"phase2_{encrypted_filename}.png")
     cv2.imwrite(phase1_save_path, scrambled_image)
     cv2.imwrite(phase2_save_path, diffused_image)
 
-
-# === DECRYPT FUNCTION (Modified to show phases) ===
-def decrypt(encrypted_image, a=1, b=1, iterations=10, x0=0.5, r=3.99):
-    decrypted = np.zeros_like(encrypted_image)
-    dediffused_image = np.zeros_like(encrypted_image)
-    unscrambled_image = np.zeros_like(encrypted_image)
-
-    for c in range(3):
-        seq = logistic_map(x0, r, encrypted_image[:, :, c].size).reshape(encrypted_image[:, :, c].shape)
-        scrambled = encrypted_image[:, :, c] ^ seq
-        original = inverse_cat_map(scrambled, a, b, iterations)
-
-        decrypted[:, :, c] = original
-        dediffused_image[:, :, c] = scrambled
-        unscrambled_image[:, :, c] = original
-
-    # Save phases
-    phase3_save_path = os.path.join('app/static/uploads', f"phase3 +{encrypted_filename}")
-    phase4_save_path = os.path.join('app/static/uploads', f"phase4 +{encrypted_filename}")
-    cv2.imwrite(phase3_save_path, dediffused_image)
-    cv2.imwrite(phase4_save_path, unscrambled_image)
-
-
+    return encrypted
 
 # === MAIN ===
 '''if __name__ == "__main__":

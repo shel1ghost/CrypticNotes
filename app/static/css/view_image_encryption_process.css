@@ -1,0 +1,18 @@
+.container {
+    max-width: 800px;
+    margin: auto;
+    display: block;
+}
+img {
+    width: 100%;
+    max-width: 300px;
+    border: 2px solid #333;
+    margin: 10px;
+}
+.section {
+    margin-bottom: 30px;
+}
+
+p{
+    text-align: justify;
+}

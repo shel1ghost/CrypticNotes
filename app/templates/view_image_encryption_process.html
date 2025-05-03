@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Encryption Details | CrypticNotes{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/view_image_encryption_process.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h1>Chaotic Encryption Process</h1>
+    <p>Chaotic encryption leverages chaotic functions to scramble and obscure data, making it unpredictable and secure. In this implementation, the Arnold’s Cat Map transformation and the Logistic Map are used to encrypt an image step by step.</p>
+
+    <div class="section">
+        <h2>Original image</h2>
+        <img src="{{ url_for('static', filename='uploads/'+image_name+'.png') }}" alt="Scrambled Image">
+    </div>
+
+    <div class="section">
+        <h2>1. Scrambling Phase</h2>
+        <p>The Arnold’s Cat Map transformation distorts pixel locations, scrambling the image in a chaotic manner. The output appears as a shuffled version of the original image but retains the original pixel values.</p>
+        <img src="{{ url_for('static', filename='uploads/phase1_'+image_name+'.png') }}" alt="Scrambled Image">
+    </div>
+
+    <div class="section">
+        <h2>2. Diffusion Phase</h2>
+        <p>A chaotic Logistic Map sequence is generated to further modify pixel values using XOR operation. This diffuses pixel values, making the encrypted image highly unintelligible. The image generated appears noisy and random, making the structure unrecognizable.</p>
+        <img src="{{ url_for('static', filename='uploads/phase2_'+image_name+'.png') }}" alt="Diffused Image">
+    </div>
+
+    <div class="section">
+        <h2>Final Encrypted Image</h2>
+        <p>The fully encrypted image is now stored as a NumPy array, ready for decryption. It is a 3D array (shape: [height, width, 3]), containing pixel values for R, G, and B channels. The data is highly scrambled and diffused, making the image incomprehensible without the decryption function.</p>
+        <img src="{{ url_for('static', filename='uploads/encrypted_'+image_name+'.png') }}" alt="Diffused Image">
+    </div>
+</div>
+
+{% endblock %}

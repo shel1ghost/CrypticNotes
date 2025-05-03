@@ -21,6 +21,7 @@
                 <p><small>Last Modified: {{ note.last_modified }}</small></p>
             </div>
             <button class="delete-btn" onclick="delete_note()">Delete</button>
+            <button class="view-image-enc-btn"><a href="{{ url_for('view_image_encryption_process', image_name=canvas_filename) }}">Image Encryption Process</a></button>
             <button class="back-btn"><a href="{{ url_for('view_notes') }}">Return</a></button>
 
             <div class="sharing_options">
