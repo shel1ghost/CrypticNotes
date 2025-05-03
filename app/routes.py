@@ -192,15 +192,8 @@ def create_new_note():
         filename = f"{secure_filename(title)}_{datetime.utcnow().timestamp()}"
         canvas_filename = None
         if canvas_data and canvas_data.startswith('data:image'):
-            # Extract base64 content
             header, encoded = canvas_data.split(",", 1)
             image_data = base64.b64decode(encoded)
-
-            # Save file to static/uploads
-            #canvas_filename = f"{filename}.png"
-            #save_path = os.path.join('app/static/uploads', canvas_filename)
-            #with open(save_path, 'wb') as f:
-            #    f.write(image_data)
             encrypted_filename = f"{filename}.png"
             save_path = os.path.join('app/static/uploads', encrypted_filename)
             with open(save_path, 'wb') as f:
@@ -209,40 +202,6 @@ def create_new_note():
             thread = threading.Thread(target=background_encryption_process, args=(save_path,filename))
             thread.start()
 
-            
-            '''img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
-
-            if img is not None and len(img.shape) == 3 and img.shape[2] == 4:
-    
-                b, g, r, a = cv2.split(img)
-                white_bg = np.ones_like(a) * 255
-                alpha = a.astype(float) / 255
-                b = b * alpha + white_bg * (1 - alpha)
-                g = g * alpha + white_bg * (1 - alpha)
-                r = r * alpha + white_bg * (1 - alpha)
-                img = cv2.merge([b.astype(np.uint8), g.astype(np.uint8), r.astype(np.uint8)])
-
-            img = cv2.resize(img, (420, 420))  # Ensure square image
-
-            a, b = 1, 1
-            iterations = 10
-            x0 = 0.6
-            r = 3.99
-
-            encrypted = encrypt_image(img, a, b, iterations, x0, r)
-            np.save(os.path.join('app/static/uploads', f'{filename}.npy'), encrypted)'''
-
-            #decrypted = decrypt_image(encrypted, a, b, iterations, x0, r)
-
-            #dec_save_path = os.path.join('app/static/uploads', f"decrypted_{encrypted_filename}")
-            
-            
-            # Save results
-            #cv2.imwrite(save_path, encrypted)
-            #cv2.imwrite(dec_save_path, decrypted)
-            
-
-        # Server-side validation for title and content
         if not title or len(title) > 100:
             flash('Title must be between 1 and 100 characters.', 'danger')
             return render_template('create_new_note.html', logged_in=True, user_name=user_name)
@@ -450,6 +409,7 @@ def delete_note():
             phase2_path = os.path.join('app/static/uploads', f"phase2_{canvas_filename}")
             numpy_array_path = os.path.join('app/static/uploads', canvas_filename.replace(".png", ".npy"))
             decrypted_image_path = os.path.join('app/static/uploads', f"decrypted_{canvas_filename}")
+            encrypted_image_path = os.path.join('app/static/uploads', f"encrypted_{canvas_filename}")
             if os.path.exists(delete_path):  # Check if the file exists
                 os.remove(delete_path) 
             if os.path.exists(phase1_path):  # Check if the file exists
@@ -460,6 +420,8 @@ def delete_note():
                 os.remove(numpy_array_path) 
             if os.path.exists(decrypted_image_path):  # Check if the file exists
                 os.remove(decrypted_image_path) 
+            if os.path.exists(encrypted_image_path):  # Check if the file exists
+                os.remove(encrypted_image_path) 
     
     # Delete the note file from the file system
     try:
