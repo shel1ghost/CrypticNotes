@@ -13,6 +13,27 @@ img {
     margin-bottom: 30px;
 }
 
-p{
+.container p{
     text-align: justify;
+    color: #333;
+}
+
+.histogram-container {
+    display: flex;
+    max-width: 800px;
+    justify-content: space-between;
+}
+.column {
+    width: 100%; /* Adjust as needed */
+}
+.column img {
+    width: 100%;
+    height: 360px;
+    display: block;
+    max-width: 380px;
+    margin-left: 10px;
+}
+
+h3, h2{
+    padding: 0px 0px 8px 0px;
 }

@@ -13,7 +13,7 @@
                 <input type="text" id="title" name="title" placeholder="Title" value="{{ note.title }}" readonly>
             </div>
             <div class="form-group">
-                <textarea id="content" name="content" placeholder="Enter text here..." readonly>{{ note.content }}</textarea>
+                <textarea id="content" name="content" placeholder="Enter text here..." readonly>{{ encrypted_note_text }}</textarea>
                 {% if canvas_filename %}
                     <h3>Canvas</h3>
                     <img id="drawingCanvasNote" src="{{ url_for('static', filename='uploads/' ~ canvas_filename) }}" alt="Canvas Image" style="max-width:100%;">
@@ -21,8 +21,11 @@
                 <p><small>Last Modified: {{ note.last_modified }}</small></p>
             </div>
             <button class="delete-btn" onclick="delete_note()">Delete</button>
+            <button class="decrypt-btn" onclick="decrypt_note()">Decrypt text</button>
+            {% if canvas_filename %}
             <button class="view-image-enc-btn"><a href="{{ url_for('view_image_encryption_process', image_name=canvas_filename) }}">Image Encryption Process</a></button>
-            <button class="back-btn"><a href="{{ url_for('view_notes') }}">Return</a></button>
+            {% endif %}
+            <button class="back-btn"><a href="{{ url_for('view_notes') }}">Back</a></button>
 
             <div class="sharing_options">
                 <h2>Sharing options</h2>
@@ -55,6 +58,13 @@
                 // Handle errors
                 console.error("Error copying link: ", error);
             });
+        }
+
+        function decrypt_note(){
+            var text_area = document.getElementById('content');
+            var decrypt_btn = document.getElementsByClassName('decrypt-btn')[0];
+            text_area.innerHTML="{{ note.content }}";
+            decrypt_btn.innerHTML="Text decrypted";
         }
         
     </script>

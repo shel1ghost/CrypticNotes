@@ -12,6 +12,7 @@ from app.utils.generate_rsa_keys import generate_rsa_keys, serialize_private_key
 from app.utils.random_id import generate_random_md5_with_number, extract_number_from_result
 from app.utils.chaotic_image_encryption import encrypt_image, decrypt_image
 from app.utils.image_encryption_process import encryption_process
+from app.utils.psnr_mse import psnr, mse
 from werkzeug.utils import secure_filename
 import re
 import os
@@ -23,6 +24,7 @@ import base64
 import cv2
 import numpy as np
 import threading
+import matplotlib.pyplot as plt
 
 def background_encryption_process(save_path, filename):
     img = cv2.imread(save_path, cv2.IMREAD_UNCHANGED)
@@ -45,6 +47,47 @@ def background_encryption_process(save_path, filename):
     encrypted = encryption_process(img, filename, a, b, iterations, x0, r)
     np.save(os.path.join('app/static/uploads', f'{filename}.npy'), encrypted)
     cv2.imwrite(os.path.join('app/static/uploads', f'encrypted_{filename}.png'), encrypted)
+
+def generate_enc_histogram(image_path, filename):
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    colors = ("r", "g", "b")
+    plt.figure(figsize=(8, 5))
+
+    for i, color in enumerate(colors):
+        hist = cv2.calcHist([image], [i], None, [256], [0, 256])
+        plt.plot(hist, color=color, label=color.capitalize())
+
+    plt.title("RGB Histogram")
+    plt.xlabel("Pixel Value")
+    plt.ylabel("Frequency")
+    plt.legend()
+    
+    histogram_path = os.path.join('app/static/uploads', f"enc_hist_{filename}.png")
+    plt.savefig(histogram_path)
+    plt.close()
+
+def generate_org_histogram(image_path, filename):
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    colors = ("r", "g", "b")
+    plt.figure(figsize=(8, 5))
+
+    for i, color in enumerate(colors):
+        hist = cv2.calcHist([image], [i], None, [256], [0, 256])
+        plt.plot(hist, color=color, label=color.capitalize())
+
+    plt.title("RGB Histogram")
+    plt.xlabel("Pixel Value")
+    plt.ylabel("Frequency")
+    plt.legend()
+    
+    histogram_path = os.path.join('app/static/uploads', f"org_hist_{filename}.png")
+    plt.savefig(histogram_path)
+    plt.close()
+    
 
 @app.route('/')
 def home():
@@ -198,9 +241,11 @@ def create_new_note():
             save_path = os.path.join('app/static/uploads', encrypted_filename)
             with open(save_path, 'wb') as f:
                 f.write(image_data)
-
-            thread = threading.Thread(target=background_encryption_process, args=(save_path,filename))
+            generate_org_histogram(save_path,filename)
+            thread = threading.Thread(target=background_encryption_process, args=(save_path,filename), daemon=True)
             thread.start()
+            #thread2 = threading.Thread(target=generate_org_histogram, args=(save_path,filename), daemon=True)
+            #thread2.start()
 
         if not title or len(title) > 100:
             flash('Title must be between 1 and 100 characters.', 'danger')
@@ -307,9 +352,14 @@ def view_note():
                 canvas_filename = f"decrypted_{encrypted_filename}"
                 dec_save_path = os.path.join('app/static/uploads', canvas_filename)
                 cv2.imwrite(dec_save_path, decrypted)
+                enc_save_path = os.path.join('app/static/uploads', f"encrypted_{encrypted_filename}")
+                generate_enc_histogram(enc_save_path, encrypted_filename.replace(".png", ""))
+                #thread = threading.Thread(target=generate_enc_histogram, args=(enc_save_path, encrypted_filename.replace(".png", "")), daemon=True)
+                #thread.start()
         
         with open(os.path.join("notes", note.filename), 'r') as file:
             data = json.load(file)
+            encrypted_note_text = data['content']
             decrypted_title = decrypt_content_blowfish(data['title'], key.key_value)
             decrypted_content = decrypt_content_blowfish(data['content'], key.key_value)
             decrypted_last_modified = decrypt_content_blowfish(data['last_modified'], key.key_value)
@@ -325,10 +375,10 @@ def view_note():
         public_key = os.path.join("rsa_keys", f"public_key_{user_id}.pem")
         valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
         if valid_signature:
-            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename, encrypted_note_text=encrypted_note_text)
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
-            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename, encrypted_note_text=encrypted_note_text)
 
 @app.route('/edit_note', methods=['GET', 'POST'])
 @login_required
@@ -410,6 +460,8 @@ def delete_note():
             numpy_array_path = os.path.join('app/static/uploads', canvas_filename.replace(".png", ".npy"))
             decrypted_image_path = os.path.join('app/static/uploads', f"decrypted_{canvas_filename}")
             encrypted_image_path = os.path.join('app/static/uploads', f"encrypted_{canvas_filename}")
+            enc_histogram_path = os.path.join('app/static/uploads', f"enc_hist_{canvas_filename}")
+            org_histogram_path = os.path.join('app/static/uploads', f"org_hist_{canvas_filename}")
             if os.path.exists(delete_path):  # Check if the file exists
                 os.remove(delete_path) 
             if os.path.exists(phase1_path):  # Check if the file exists
@@ -422,6 +474,10 @@ def delete_note():
                 os.remove(decrypted_image_path) 
             if os.path.exists(encrypted_image_path):  # Check if the file exists
                 os.remove(encrypted_image_path) 
+            if os.path.exists(enc_histogram_path):  # Check if the file exists
+                os.remove(enc_histogram_path) 
+            if os.path.exists(org_histogram_path):  # Check if the file exists
+                os.remove(org_histogram_path) 
     
     # Delete the note file from the file system
     try:
@@ -753,6 +809,12 @@ def view_image_encryption_process():
         user_name = None
     #image_array = np.load(os.path.join('app/static/uploads', request.args.get('image_name').replace("decrypted_", "").replace(".png", ".npy")))
     image_name = request.args.get('image_name').replace("decrypted_", "").replace(".png", "")
-    return render_template('view_image_encryption_process.html', image_name=image_name, logged_in=logged_in, user_name=user_name) 
+    original_image = os.path.join('app/static/uploads', request.args.get('image_name').replace("decrypted_", ""))
+    decrypted_image = os.path.join('app/static/uploads', request.args.get('image_name'))
+    original = cv2.imread(original_image, cv2.IMREAD_GRAYSCALE)
+    decrypted = cv2.imread(decrypted_image, cv2.IMREAD_GRAYSCALE)
+    psnr_value = round(psnr(original, decrypted), 2)
+    mse_value = round(mse(original, decrypted), 2)
+    return render_template('view_image_encryption_process.html', image_name=image_name, psnr_value=psnr_value, mse_value=mse_value, logged_in=logged_in, user_name=user_name) 
     
 

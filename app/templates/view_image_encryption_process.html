@@ -34,6 +34,25 @@
         <p>The fully encrypted image is now stored as a NumPy array, ready for decryption. It is a 3D array (shape: [height, width, 3]), containing pixel values for R, G, and B channels. The data is highly scrambled and diffused, making the image incomprehensible without the decryption function.</p>
         <img src="{{ url_for('static', filename='uploads/encrypted_'+image_name+'.png') }}" alt="Diffused Image">
     </div>
+    <h2 class="histogram-header">Histogram for image</h2>
+    <p>An RGB histogram represents the distribution of pixel intensity values for the Red, Green, and Blue channels of an image. It shows how frequently each pixel value (0 to 255) appears in the image for each color channel.</p>
+    <div class="histogram-container">
+    <div class="column">
+        <h3>Original image</h3>
+        <img src="{{ url_for('static', filename='uploads/org_hist_'+image_name+'.png') }}"" alt="Image 1">
+    </div>
+    <div class="column">
+        <h3>Encrypted image</h3>
+        <img src="{{ url_for('static', filename='uploads/enc_hist_'+image_name+'.png') }}"" alt="Image 2">
+    </div>
 </div>
+<h2>PSNR and MSF values for original and decrypted image</h2>
+<p>PSNR measures the quality of an image by comparing it to an ideal original. Higher PSNR values indicate better image quality.</p>
+<p>MSE measures the average squared difference between pixel values of two images. A lower MSE indicates that the images are more similar.</p>
+<p>PSNR: {{ psnr_value }} dB</p>
+<p>MSE: {{ mse_value }}</p>
+</div>
+
+
 
 {% endblock %}

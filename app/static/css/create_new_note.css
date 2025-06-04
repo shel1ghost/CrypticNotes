@@ -60,9 +60,9 @@
     margin: 4px;
 }
 
-.save-btn, .back-btn, .delete-btn, .cancel-btn, .view-image-enc-btn{
+.save-btn, .back-btn, .delete-btn, .cancel-btn, .view-image-enc-btn, .decrypt-btn{
     width: 100px;
-    padding: 10px 20px;
+    padding: 8px 4px;
     font-size: 1.2em;
     color: #ecf0f1;
     background-color: #2980b9;
@@ -106,7 +106,7 @@
 
 
 .sharing_options button {
-    padding: 10px 20px;
+    padding: 8px 8px;
     font-size: 1.2em;
     color: #ecf0f1;
     background-color: #2980b9;
@@ -188,6 +188,14 @@ h4 {
 
 .view-image-enc-btn {
     width: 280px;
+}
+
+.decrypt-btn {
+    width: 144px;
+}
+
+.back-btn {
+    width: 60px;
 }
 
 
