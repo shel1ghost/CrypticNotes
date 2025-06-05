@@ -374,11 +374,12 @@ def view_note():
         
         public_key = os.path.join("rsa_keys", f"public_key_{user_id}.pem")
         valid_signature = verify_note_content(decrypted_note['title'], decrypted_note['content'], signature, public_key)
+        enc_image = f"{canvas_filename}".replace("decrypted_", "encrypted_")
         if valid_signature:
-            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename, encrypted_note_text=encrypted_note_text)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename, encrypted_note_text=encrypted_note_text, enc_image=enc_image)
         else:
             flash('The integrity of this note seems to be compromised.', 'danger')
-            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename, encrypted_note_text=encrypted_note_text)
+            return render_template('view_note.html', note=decrypted_note, note_id=req_id, logged_in=True, user_name=user_name, canvas_filename=canvas_filename, encrypted_note_text=encrypted_note_text, enc_image=enc_image)
 
 @app.route('/edit_note', methods=['GET', 'POST'])
 @login_required

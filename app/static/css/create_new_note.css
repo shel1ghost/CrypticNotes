@@ -60,7 +60,7 @@
     margin: 4px;
 }
 
-.save-btn, .back-btn, .delete-btn, .cancel-btn, .view-image-enc-btn, .decrypt-btn{
+.save-btn, .back-btn, .delete-btn, .cancel-btn, .view-image-enc-btn, .decrypt-btn, .decrypt-img-btn{
     width: 100px;
     padding: 8px 4px;
     font-size: 1.2em;
@@ -196,6 +196,10 @@ h4 {
 
 .back-btn {
     width: 60px;
+}
+
+.decrypt-img-btn {
+    width: 200px;
 }
 
 

@@ -16,13 +16,14 @@
                 <textarea id="content" name="content" placeholder="Enter text here..." readonly>{{ encrypted_note_text }}</textarea>
                 {% if canvas_filename %}
                     <h3>Canvas</h3>
-                    <img id="drawingCanvasNote" src="{{ url_for('static', filename='uploads/' ~ canvas_filename) }}" alt="Canvas Image" style="max-width:100%;">
+                    <img id="drawingCanvasNote" src="{{ url_for('static', filename='uploads/' ~ enc_image) }}" alt="Canvas Image" style="max-width:100%;">
                 {% endif %}
                 <p><small>Last Modified: {{ note.last_modified }}</small></p>
             </div>
             <button class="delete-btn" onclick="delete_note()">Delete</button>
             <button class="decrypt-btn" onclick="decrypt_note()">Decrypt text</button>
             {% if canvas_filename %}
+            <button class="decrypt-img-btn" onclick="decrypt_image()">Decrypt image</button>
             <button class="view-image-enc-btn"><a href="{{ url_for('view_image_encryption_process', image_name=canvas_filename) }}">Image Encryption Process</a></button>
             {% endif %}
             <button class="back-btn"><a href="{{ url_for('view_notes') }}">Back</a></button>
@@ -65,6 +66,13 @@
             var decrypt_btn = document.getElementsByClassName('decrypt-btn')[0];
             text_area.innerHTML="{{ note.content }}";
             decrypt_btn.innerHTML="Text decrypted";
+        }
+
+        function decrypt_image(){
+            var img = document.getElementById("drawingCanvasNote");
+            var decrypt_btn = document.getElementsByClassName('decrypt-img-btn')[0];
+            img.src="{{ url_for('static', filename='uploads/' ~ canvas_filename) }}";
+            decrypt_btn.innerHTML="Image decrypted";
         }
         
     </script>
