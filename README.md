@@ -15,7 +15,7 @@ CrypticNotes is a secure web-based note-taking app that encrypts text, images, a
 To run the project locally:
 
 ```bash
-git clone https://github.com/yourusername/crypticnotes.git
+git clone https://github.com/shel1ghost/crypticnotes.git
 cd crypticnotes
 pip install -r requirements.txt
 # Then follow any additional setup instructions
